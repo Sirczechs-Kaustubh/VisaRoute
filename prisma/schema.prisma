@@ -1,0 +1,449 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Region {
+  WESTERN_EUROPE
+  NORDIC
+  CENTRAL_EASTERN_EUROPE
+  SOUTHERN_EUROPE
+  BRITISH_ISLES
+  NORTH_AMERICA
+  OCEANIA
+  EAST_ASIA
+}
+
+enum NationalityCategory {
+  VISA_REQUIRED
+  VISA_EXEMPT
+  ALL
+}
+
+enum ApplicationStatus {
+  DRAFT
+  IN_PROGRESS
+  DOCUMENTS_PENDING
+  CHECKS_PENDING
+  CHECKS_REVIEWED
+  PACK_PENDING
+  PACK_GENERATED
+  APPOINTMENT_PENDING
+  COMPLETED
+  SUBMITTED
+}
+
+enum OperationalStatus {
+  NOT_STARTED
+  INITIATED
+  UNDER_REVIEW
+  APPOINTMENT_PENDING
+  BIOMETRIC_PENDING
+  DECISION_PENDING
+  CLOSED
+}
+
+enum DocumentUploadStatus {
+  UPLOADED
+  PROCESSING
+  FAILED
+  DELETED
+}
+
+enum ExtractionStatus {
+  NOT_STARTED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum AlertChannel {
+  EMAIL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  UNSUBSCRIBED
+}
+
+model CountryGroup {
+  id                    String   @id @default(cuid())
+  code                  String   @unique
+  name                  String
+  description           String?
+  defaultCurrency       String   @default("EUR")
+  coverLetterTemplate   String?
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  countries             Country[]
+}
+
+model Country {
+  id                    String                        @id @default(cuid())
+  slug                  String                        @unique
+  name                  String
+  code                  String
+  region                Region
+  countryGroupCode      String                        @default("schengen")
+  isActive              Boolean                       @default(true)
+  displayOrder          Int                           @default(0)
+  heroImageUrl          String?
+  cardImageUrl          String?
+  visaFeeEur            Int
+  serviceFeeEur         Int
+  processingDaysMin     Int
+  processingDaysMax     Int
+  appointmentLeadWeeks  Int
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+  countryGroup          CountryGroup                  @relation(fields: [countryGroupCode], references: [code])
+  visaProfile           CountryVisaProfile?
+  documentRequirements  DocumentRequirement[]
+  processSteps          VisaProcessStep[]
+  rejectionReasons      RejectionReason[]
+  applications          Application[]
+  alertSubscriptions    AppointmentAlertSubscription[]
+  availabilitySnapshots AppointmentAvailabilitySnapshot[]
+
+  @@index([countryGroupCode])
+}
+
+model CountryVisaProfile {
+  id                  String   @id @default(cuid())
+  countryId           String   @unique
+  visaStayLimitDays   Int
+  entryTypeDefault    String
+  approvalRatePercent Int
+  overviewText        String
+  importantNotes      String?
+  disclaimerText      String?
+  sourceMode          String   @default("seeded")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  country             Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+}
+
+model VisaType {
+  id                    String                        @id @default(cuid())
+  code                  String                        @unique
+  label                 String
+  category              String
+  isActive              Boolean                       @default(true)
+  sortOrder             Int                           @default(0)
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+  documentRequirements  DocumentRequirement[]
+  alertSubscriptions    AppointmentAlertSubscription[]
+  availabilitySnapshots AppointmentAvailabilitySnapshot[]
+}
+
+model DocumentRequirement {
+  id                   String               @id @default(cuid())
+  code                 String
+  name                 String
+  description          String
+  required             Boolean
+  nationalityCategory  NationalityCategory
+  residenceCountryCode String?
+  purposeCode          String?
+  employmentStatus     String?
+  sortOrder            Int                  @default(0)
+  isActive             Boolean              @default(true)
+  countryId            String?
+  visaTypeId           String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  country              Country?             @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  visaType             VisaType?            @relation(fields: [visaTypeId], references: [id], onDelete: SetNull)
+
+  @@index([countryId])
+  @@index([visaTypeId])
+  @@index([code])
+}
+
+model VisaProcessStep {
+  id          String   @id @default(cuid())
+  countryId   String?
+  code        String
+  title       String
+  description String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  country     Country? @relation(fields: [countryId], references: [id], onDelete: Cascade)
+}
+
+model RejectionReason {
+  id          String   @id @default(cuid())
+  countryId   String?
+  code        String
+  title       String
+  description String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  country     Country? @relation(fields: [countryId], references: [id], onDelete: Cascade)
+}
+
+model Application {
+  id                   String              @id @default(cuid())
+  draftToken           String              @unique
+  countryId            String
+  status               ApplicationStatus   @default(DRAFT)
+  operationalStatus    OperationalStatus   @default(NOT_STARTED)
+  currentStep          Int                 @default(1)
+  completionPercent    Int                 @default(8)
+  submittedAt          DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  applyingFromCountry  String?
+  country              Country             @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  applicantProfile     ApplicantProfile?
+  travelPlan           TravelPlan?
+  companionGroup       CompanionGroup?
+  employmentProfile    EmploymentProfile?
+  visaHistoryEntries   VisaHistoryEntry[]
+  refusalHistoryEntries RefusalHistoryEntry[]
+  documents            ApplicationDocument[]
+  checkResults         CheckResult[]
+  generatedPack        GeneratedPack?
+  orders               Order[]
+  submissionRef        String?
+}
+
+model ApplicantProfile {
+  id                 String      @id @default(cuid())
+  applicationId      String      @unique
+  firstName          String?
+  lastName           String?
+  email              String?
+  phoneNumber        String?
+  countryOfResidence String?
+  purposeOfTravel    String?
+  travelStartDate    DateTime?
+  travelEndDate      DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  application        Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model TravelPlan {
+  id                String      @id @default(cuid())
+  applicationId     String      @unique
+  accommodationType String?
+  entryCity         String?
+  multiCountryMode  String?
+  tripLengthDays    Int?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  application       Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model CompanionGroup {
+  id                       String      @id @default(cuid())
+  applicationId            String      @unique
+  travellingWithCompanions String?
+  companionsCount          Int?
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+  application              Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model EmploymentProfile {
+  id               String      @id @default(cuid())
+  applicationId    String      @unique
+  employmentStatus String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  application      Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model VisaHistoryEntry {
+  id            String      @id @default(cuid())
+  applicationId String
+  countryName   String?
+  yearLabel     String?
+  sortOrder     Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+model RefusalHistoryEntry {
+  id            String      @id @default(cuid())
+  applicationId String
+  countryName   String?
+  yearLabel     String?
+  visaTypeLabel String?
+  reason        String?
+  sortOrder     Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+model AppointmentAlertSubscription {
+  id         String             @id @default(cuid())
+  countryId  String
+  visaTypeId String?
+  email      String
+  channel    AlertChannel       @default(EMAIL)
+  status     SubscriptionStatus @default(ACTIVE)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  country    Country            @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  visaType   VisaType?          @relation(fields: [visaTypeId], references: [id], onDelete: SetNull)
+
+  @@index([countryId])
+  @@index([email])
+}
+
+model AppointmentAvailabilitySnapshot {
+  id                String    @id @default(cuid())
+  countryId         String
+  visaTypeId        String?
+  status            String
+  nextAvailableDate DateTime?
+  checkedAt         DateTime
+  confidence        Float?
+  rawPayload        String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  country           Country   @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  visaType          VisaType? @relation(fields: [visaTypeId], references: [id], onDelete: SetNull)
+
+  @@index([countryId, checkedAt])
+}
+
+model ApplicationDocument {
+  id               String               @id @default(cuid())
+  applicationId    String
+  documentType     String
+  storageKey       String
+  originalFileName String
+  mimeType         String
+  fileSizeBytes    Int
+  uploadStatus     DocumentUploadStatus @default(UPLOADED)
+  extractionStatus ExtractionStatus     @default(NOT_STARTED)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  application      Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  extractions      DocumentExtraction[]
+
+  @@index([applicationId])
+  @@index([applicationId, documentType])
+}
+
+model DocumentExtraction {
+  id                String      @id @default(cuid())
+  documentId        String
+  extractorVersion  String      @default("v1")
+  rawPayload        String
+  normalizedPayload String
+  confidence        Float?
+  createdAt         DateTime    @default(now())
+  document          ApplicationDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+model CheckResult {
+  id            String      @id @default(cuid())
+  applicationId String
+  runId         String
+  checkCode     String
+  status        String
+  title         String
+  detail        String?
+  subDetail     String?
+  severity      String      @default("error")
+  createdAt     DateTime    @default(now())
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([applicationId, runId])
+}
+
+model CheckRule {
+  id              String   @id @default(cuid())
+  ruleCode        String
+  countryGroupCode String  @default("schengen")
+  title           String
+  description     String?
+  parameters      String?
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([ruleCode, countryGroupCode])
+  @@index([countryGroupCode])
+}
+
+model GeneratedPack {
+  id                       String      @id @default(cuid())
+  applicationId            String      @unique
+  status                   String      @default("pending")
+  coverLetterStorageKey    String?
+  checklistStorageKey      String?
+  summaryStorageKey        String?
+  coverLetterText          String?
+  checklistText            String?
+  generatedAt              DateTime?
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+  application              Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model ServiceTier {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String
+  priceGBP    Int
+  features    String
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  applicationId    String
+  serviceTierId    String
+  status           String      @default("pending")
+  paymentReference String?
+  paidAt           DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  application      Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  serviceTier      ServiceTier @relation(fields: [serviceTierId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId])
+}
+
+model EmailLog {
+  id              String    @id @default(cuid())
+  applicationId   String
+  emailType       String
+  recipientEmail  String
+  status          String    @default("pending")
+  error           String?
+  sentAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([applicationId])
+  @@index([emailType])
+}

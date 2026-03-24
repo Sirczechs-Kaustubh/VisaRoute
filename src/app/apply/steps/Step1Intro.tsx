@@ -3,7 +3,22 @@
 import type { ApplicationData } from "../ApplyFlow";
 import { StepFooter, TipBox } from "../StepFooter";
 
+const APPLYING_FROM = [
+  { value: "", label: "Select country..." },
+  { value: "gb", label: "United Kingdom" },
+  { value: "in", label: "India" },
+  { value: "us", label: "United States" },
+  { value: "ae", label: "UAE" },
+  { value: "ng", label: "Nigeria" },
+  { value: "pk", label: "Pakistan" },
+  { value: "bd", label: "Bangladesh" },
+  { value: "ph", label: "Philippines" },
+  { value: "za", label: "South Africa" },
+  { value: "other", label: "Other" },
+];
+
 const RESIDENCES = [
+  { value: "", label: "Select country..." },
   { value: "gb", label: "United Kingdom" },
   { value: "in", label: "India" },
   { value: "us", label: "United States" },
@@ -39,7 +54,7 @@ export function Step1Intro({
         Your stated travel purpose determines which documents are required. Be specific – it leads to a stronger cover letter.
       </TipBox>
 
-      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 1 of 13</p>
+      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 1 of 11</p>
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
         Hi! Let&apos;s start your application.
       </h1>
@@ -92,6 +107,19 @@ export function Step1Intro({
               className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-slate-900 placeholder-slate-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">Where are you applying from?</label>
+          <select
+            value={data.applyingFromCountry}
+            onChange={(e) => updateData({ applyingFromCountry: e.target.value })}
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+          >
+            {APPLYING_FROM.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -151,7 +179,7 @@ export function Step1Intro({
         </div>
       </div>
 
-      <StepFooter step={1} total={13} onBack={onBack} onNext={onNext} />
+      <StepFooter step={1} total={11} onBack={onBack} onNext={onNext} />
     </>
   );
 }

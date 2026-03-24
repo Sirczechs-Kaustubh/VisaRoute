@@ -3,11 +3,18 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { SCHENGEN_COUNTRIES, REGIONS, getCountryImageUrl } from "@/data/countries";
+import type { CountrySummary } from "@/lib/contracts";
 
-const POPULAR_COUNTRY_IDS = ["fr", "de", "es", "it", "nl"];
+const REGIONS = [
+  "Western Europe",
+  "Nordic",
+  "Central/Eastern Europe",
+  "Southern Europe",
+] as const;
 
-export function DestinationSearch() {
+const POPULAR_COUNTRY_SLUGS = ["france", "germany", "spain", "italy", "netherlands"];
+
+export function DestinationSearch({ countries }: { countries: CountrySummary[] }) {
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState<string>("all");
   const [popularOnly, setPopularOnly] = useState(false);
@@ -15,7 +22,7 @@ export function DestinationSearch() {
 
   const filteredByRegion = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let filtered = SCHENGEN_COUNTRIES;
+    let filtered = countries;
 
     if (q) {
       filtered = filtered.filter(
@@ -31,7 +38,7 @@ export function DestinationSearch() {
     }
 
     if (popularOnly) {
-      filtered = filtered.filter((c) => POPULAR_COUNTRY_IDS.includes(c.id));
+      filtered = filtered.filter((c) => POPULAR_COUNTRY_SLUGS.includes(c.slug));
     }
 
     if (appointmentLead === "quick") {
@@ -45,7 +52,7 @@ export function DestinationSearch() {
       countries: filtered.filter((c) => c.region === r),
     })).filter((r) => r.countries.length > 0);
     return byRegion;
-  }, [query, region, popularOnly, appointmentLead]);
+  }, [countries, query, region, popularOnly, appointmentLead]);
 
   return (
     <>
@@ -177,7 +184,7 @@ export function DestinationSearch() {
                   >
                     <div className="relative aspect-[3/2] bg-slate-200">
                       <Image
-                        src={getCountryImageUrl(country)}
+                        src={country.cardImageUrl ?? "https://picsum.photos/seed/fallback/600/400"}
                         alt={country.name}
                         fill
                         sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"

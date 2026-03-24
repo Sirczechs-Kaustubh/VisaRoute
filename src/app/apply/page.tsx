@@ -1,10 +1,16 @@
 import Link from "next/link";
-import { getCountryBySlug } from "@/data/countries";
+import type { ApplicationDraft, CountryDetail } from "@/lib/contracts";
+import { ApplicationsService } from "@/server/applications/applications.service";
+import { CountriesService } from "@/server/countries/countries.service";
 import { ApplyFlow } from "./ApplyFlow";
 
 interface SearchParams {
   country?: string;
+  draft?: string;
 }
+
+const countriesService = new CountriesService();
+const applicationsService = new ApplicationsService();
 
 export default async function ApplyPage({
   searchParams,
@@ -13,7 +19,33 @@ export default async function ApplyPage({
 }) {
   const params = await searchParams;
   const countrySlug = params?.country ?? null;
-  const country = countrySlug ? getCountryBySlug(countrySlug) : null;
+  const draftToken = params?.draft ?? null;
+
+  let initialDraft: ApplicationDraft | null = null;
+
+  if (draftToken) {
+    try {
+      initialDraft = await applicationsService.getApplicationDraft(draftToken);
+    } catch {
+      initialDraft = null;
+    }
+  }
+
+  let country: CountryDetail | null = null;
+
+  if (initialDraft?.country.slug) {
+    try {
+      country = await countriesService.getCountryBySlug(initialDraft.country.slug);
+    } catch {
+      country = null;
+    }
+  } else if (countrySlug) {
+    try {
+      country = await countriesService.getCountryBySlug(countrySlug);
+    } catch {
+      country = null;
+    }
+  }
 
   if (!country) {
     return (
@@ -47,6 +79,7 @@ export default async function ApplyPage({
       countrySlug={country.slug}
       visaFeeEur={country.visaFeeEur}
       serviceFeeEur={country.ourServiceFeeEur}
+      initialDraft={initialDraft}
     />
   );
 }

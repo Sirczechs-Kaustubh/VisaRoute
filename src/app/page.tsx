@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { DestinationSearch } from "@/components/DestinationSearch";
+import { CountriesService } from "@/server/countries/countries.service";
 
-export default function HomePage() {
+const countriesService = new CountriesService();
+
+export default async function HomePage() {
+  const countries = await countriesService.listCountries({});
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-sky-50/30">
       <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
@@ -50,7 +55,7 @@ export default function HomePage() {
         </section>
 
         <section id="choose-destination" className="mb-8">
-          <DestinationSearch />
+          <DestinationSearch countries={countries} />
         </section>
 
         <section
