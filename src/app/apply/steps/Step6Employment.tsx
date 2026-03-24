@@ -31,7 +31,7 @@ export function Step6Employment({
         Show at least €100/day of travel in your bank account. For a 7-day trip, that&apos;s €700+ minimum clearly visible.
       </TipBox>
 
-      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 6 of 13</p>
+      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 5 of 11</p>
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
         Your employment & finances.
       </h1>
@@ -58,7 +58,7 @@ export function Step6Employment({
         </div>
       </div>
 
-      <StepFooter step={6} total={13} onBack={onBack} onNext={onNext} />
+      <StepFooter step={5} total={11} onBack={onBack} onNext={onNext} />
     </>
   );
 }

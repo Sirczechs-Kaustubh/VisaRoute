@@ -1,17 +1,17 @@
 "use client";
 
-import { useRef } from "react";
-import type { ApplicationData } from "../ApplyFlow";
+import { useRef, useState } from "react";
+import type { ApplicationData, UploadedDocument } from "../ApplyFlow";
 import { StepFooter, TipBox } from "../StepFooter";
 
 const DOCUMENT_TYPES = [
-  { id: "passport", label: "Passport", desc: "Photo page – valid 3+ months after travel", autoCaptured: true },
-  { id: "residence", label: "Residence permit", desc: "BRP or UK visa endorsement", autoCaptured: true },
-  { id: "bank", label: "Bank statements", desc: "Last 3 months – min. €50-100/day of travel", autoCaptured: false },
-  { id: "insurance", label: "Travel insurance", desc: "Min. €30,000 coverage across all Schengen", autoCaptured: false },
-  { id: "flight", label: "Flight reservation", desc: "Confirmed or dummy booking", autoCaptured: false },
-  { id: "hotel", label: "Hotel / accommodation", desc: "Booking for all nights of stay", autoCaptured: false },
-  { id: "employment", label: "Employment letter", desc: "Signed by employer", autoCaptured: false },
+  { id: "passport", label: "Passport (front)", desc: "Photo page – valid 3+ months after travel", icon: "🛂", autoCaptured: true, altTypes: ["passport_back"] },
+  { id: "brp", label: "Residence permit", desc: "BRP, visa vignette or eVisa", icon: "🏠", autoCaptured: true, altTypes: ["residence_permit", "visa_vignette", "evisa"] },
+  { id: "bank_statement", label: "Bank statements", desc: "Last 3 months – min. €50-100/day of travel", icon: "🏦", autoCaptured: false },
+  { id: "travel_insurance", label: "Travel insurance", desc: "Min. €30,000 coverage across all Schengen", icon: "🛡️", autoCaptured: false },
+  { id: "flight_booking", label: "Flight reservation", desc: "Confirmed or dummy booking", icon: "✈️", autoCaptured: false },
+  { id: "accommodation_proof", label: "Hotel / accommodation", desc: "Booking for all nights of stay", icon: "🛏️", autoCaptured: false },
+  { id: "employment_letter", label: "Employment letter", desc: "Signed by employer", icon: "📄", autoCaptured: false },
 ];
 
 export function Step9Documents({
@@ -20,46 +20,47 @@ export function Step9Documents({
   countryName,
   onNext,
   onBack,
+  uploadDocument,
+  deleteDocument,
 }: {
   data: ApplicationData;
   updateData: (u: Partial<ApplicationData>) => void;
   countryName: string;
   onNext: () => void;
   onBack: () => void;
+  uploadDocument: (file: File, documentType: string) => Promise<UploadedDocument | null>;
+  deleteDocument: (docId: string) => Promise<void>;
 }) {
   const refs = useRef<Record<string, HTMLInputElement | null>>({});
-  const autoCaptured = (data.passportFile ? 1 : 0) + (data.residenceFile ? 1 : 0);
-  const manualUploaded = Object.keys(data.documents).length;
-  const complete = autoCaptured + manualUploaded;
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
-  const handleUpload = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (id === "passport") updateData({ passportFile: { file, name: file.name } });
-    else if (id === "residence") updateData({ residenceFile: { file, name: file.name } });
-    else updateData({ documents: { ...data.documents, [id]: { file, name: file.name } } });
+  const isDocUploaded = (docId: string, altTypes?: string[]) => {
+    const typesToCheck = [docId, ...(altTypes ?? [])];
+    return data.uploadedDocuments.some((d) => typesToCheck.includes(d.documentType));
   };
 
-  const removeDoc = (id: string) => {
-    if (id === "passport") updateData({ passportFile: null });
-    else if (id === "residence") updateData({ residenceFile: null });
-    else {
-      const next = { ...data.documents };
-      delete next[id];
-      updateData({ documents: next });
+  const getUploadedDoc = (docId: string, altTypes?: string[]) => {
+    const typesToCheck = [docId, ...(altTypes ?? [])];
+    return data.uploadedDocuments.find((d) => typesToCheck.includes(d.documentType));
+  };
+
+  const completedCount = DOCUMENT_TYPES.filter((doc) => isDocUploaded(doc.id, doc.autoCaptured ? (doc as { altTypes?: string[] }).altTypes : undefined)).length;
+
+  const handleUpload = async (docTypeId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingId(docTypeId);
+    await uploadDocument(file, docTypeId);
+    setUploadingId(null);
+
+    if (refs.current[docTypeId]) {
+      refs.current[docTypeId]!.value = "";
     }
   };
 
-  const isUploaded = (doc: { id: string }) => {
-    if (doc.id === "passport") return !!data.passportFile;
-    if (doc.id === "residence") return !!data.residenceFile;
-    return !!data.documents[doc.id];
-  };
-
-  const getFileName = (doc: { id: string }) => {
-    if (doc.id === "passport") return data.passportFile?.name;
-    if (doc.id === "residence") return data.residenceFile?.name;
-    return data.documents[doc.id]?.name;
+  const handleRemove = async (docId: string, docTypeId: string) => {
+    await deleteDocument(docId);
   };
 
   return (
@@ -68,7 +69,7 @@ export function Step9Documents({
         Upload clear, colour scans. Blurry or black-and-white documents are a common reason for delays.
       </TipBox>
 
-      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 9 of 13</p>
+      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 7 of 11</p>
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
         Upload your supporting documents.
       </h1>
@@ -78,21 +79,23 @@ export function Step9Documents({
 
       <div className="mt-6 rounded-xl bg-emerald-50 p-4">
         <p className="flex items-center gap-2 text-sm font-medium text-emerald-800">
-          <span>✓</span> Passport and residence permit already captured. Only {DOCUMENT_TYPES.length - 2} documents left to upload.
+          <span>✓</span> {completedCount} / {DOCUMENT_TYPES.length} documents uploaded
         </p>
       </div>
 
       <div className="mt-8">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">Your personalised checklist</h2>
-        <p className="mt-1 text-sm text-slate-500">{complete} / {DOCUMENT_TYPES.length} complete</p>
         <div className="mt-4 space-y-3">
           {DOCUMENT_TYPES.map((doc) => {
-            const uploaded = isUploaded(doc);
-            const fileName = getFileName(doc);
+            const altTypes = (doc as { altTypes?: string[] }).altTypes;
+            const uploaded = isDocUploaded(doc.id, altTypes);
+            const uploadedDoc = getUploadedDoc(doc.id, altTypes);
+            const isThisUploading = uploadingId === doc.id;
+
             return (
               <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{doc.id === "passport" ? "🛂" : doc.id === "residence" ? "🏠" : doc.id === "bank" ? "🏦" : doc.id === "insurance" ? "🛡️" : doc.id === "flight" ? "✈️" : doc.id === "hotel" ? "🛏️" : "📄"}</span>
+                  <span className="text-2xl">{doc.icon}</span>
                   <div>
                     <p className="font-semibold text-slate-900">{doc.label}</p>
                     <p className="text-sm text-slate-500">{doc.desc}</p>
@@ -102,13 +105,20 @@ export function Step9Documents({
                   )}
                 </div>
                 <div>
-                  {uploaded ? (
+                  {isThisUploading ? (
                     <div className="flex items-center gap-2">
-                      <span className="max-w-[120px] truncate text-sm font-medium text-emerald-700">{fileName}</span>
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600" />
+                      <span className="text-sm text-slate-500">Uploading...</span>
+                    </div>
+                  ) : uploaded && uploadedDoc ? (
+                    <div className="flex items-center gap-2">
+                      <span className="max-w-[120px] truncate text-sm font-medium text-emerald-700">{uploadedDoc.originalFileName}</span>
                       {!doc.autoCaptured && (
-                        <button onClick={() => removeDoc(doc.id)} className="text-sm text-slate-500 hover:text-red-600">Remove</button>
+                        <button onClick={() => handleRemove(uploadedDoc.id, doc.id)} className="text-sm text-slate-500 hover:text-red-600">Remove</button>
                       )}
                     </div>
+                  ) : doc.autoCaptured ? (
+                    <span className="text-sm text-amber-600">Not yet uploaded</span>
                   ) : (
                     <>
                       <input ref={(el) => { refs.current[doc.id] = el; }} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => handleUpload(doc.id, e)} className="hidden" />
@@ -128,7 +138,7 @@ export function Step9Documents({
         </p>
       </div>
 
-      <StepFooter step={9} total={13} onBack={onBack} onNext={onNext} />
+      <StepFooter step={7} total={11} onBack={onBack} onNext={onNext} />
     </>
   );
 }

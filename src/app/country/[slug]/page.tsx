@@ -1,31 +1,47 @@
 import { notFound } from "next/navigation";
-import { getCountryBySlug, SCHENGEN_COUNTRIES } from "@/data/countries";
-import {
-  getDocumentsForVisaType,
-  VISA_TYPE_LABELS,
-  type VisaType,
-} from "@/data/documents";
+import type { CountryDetail, DocumentRequirementResponse, VisaTypeOption } from "@/lib/contracts";
+import { CountriesService } from "@/server/countries/countries.service";
+import { RulesService } from "@/server/rules/rules.service";
 import { CountryPageClient } from "./CountryPageClient";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export function generateStaticParams() {
-  return SCHENGEN_COUNTRIES.map((c) => ({ slug: c.slug }));
+const countriesService = new CountriesService();
+const rulesService = new RulesService();
+
+export async function generateStaticParams() {
+  const countries = await countriesService.listCountries({});
+  return countries.map((country) => ({ slug: country.slug }));
 }
 
 export default async function CountryPage({ params }: PageProps) {
   const { slug } = await params;
-  const country = getCountryBySlug(slug);
+  let country: CountryDetail | null = null;
+  let visaTypes: VisaTypeOption[] = [];
+  let initialRequirements: DocumentRequirementResponse | null = null;
+
+  try {
+    [country, visaTypes] = await Promise.all([
+      countriesService.getCountryBySlug(slug),
+      rulesService.listVisaTypes(),
+    ]);
+    initialRequirements = await rulesService.getDocumentRequirements(slug, {
+      visaTypeCode: "short-stay-tourism",
+      nationalityCategory: "visa-required",
+    });
+  } catch {
+    country = null;
+  }
+
   if (!country) notFound();
 
-  const visaTypes = Object.keys(VISA_TYPE_LABELS) as VisaType[];
-  const documentsByType = Object.fromEntries(
-    visaTypes.map((type) => [type, getDocumentsForVisaType(type)])
-  ) as Record<VisaType, ReturnType<typeof getDocumentsForVisaType>>;
-
   return (
-    <CountryPageClient country={country} documentsByType={documentsByType} />
+    <CountryPageClient
+      country={country}
+      visaTypes={visaTypes}
+      initialRequirements={initialRequirements}
+    />
   );
 }
