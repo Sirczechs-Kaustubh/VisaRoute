@@ -55,6 +55,16 @@ export class DocumentsRepository {
     });
   }
 
+  async createExtraction(params: {
+    documentId: string;
+    extractorVersion: string;
+    rawPayload: string;
+    normalizedPayload: string;
+    confidence: number;
+  }) {
+    return db.documentExtraction.create({ data: params });
+  }
+
   async findExtractionsByDocumentId(documentId: string) {
     return db.documentExtraction.findMany({
       where: { documentId },

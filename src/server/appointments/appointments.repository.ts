@@ -24,13 +24,37 @@ export class AppointmentsRepository {
     });
   }
 
-  async createSubscription(params: { countryId: string; email: string; visaTypeId: string | null }) {
+  async createSubscription(params: {
+    countryId: string;
+    email: string;
+    visaTypeId: string | null;
+    residenceCountry?: string | null;
+    city?: string | null;
+    provider?: string | null;
+  }) {
     return db.appointmentAlertSubscription.create({
       data: {
         countryId: params.countryId,
         email: params.email,
         visaTypeId: params.visaTypeId,
+        residenceCountry: params.residenceCountry ?? null,
+        city: params.city ?? null,
+        provider: params.provider ?? null,
       },
+    });
+  }
+
+  async cancelSubscriptionById(id: string) {
+    return db.appointmentAlertSubscription.update({
+      where: { id },
+      data: { status: "UNSUBSCRIBED" },
+    });
+  }
+
+  async cancelSubscriptionByEmail(countryId: string, email: string) {
+    return db.appointmentAlertSubscription.updateMany({
+      where: { countryId, email, status: "ACTIVE" },
+      data: { status: "UNSUBSCRIBED" },
     });
   }
 }

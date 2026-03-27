@@ -144,3 +144,64 @@ export function buildPackReadyEmail(data: Record<string, unknown>): EmailContent
     text,
   };
 }
+
+// ─── Appointment Alert ──────────────────────────────────
+
+export function buildAppointmentAlertEmail(data: Record<string, unknown>): EmailContent {
+  const countryName = (data.countryName as string) || "Visa";
+  const city = (data.city as string) || "";
+  const provider = (data.provider as string) || "";
+  const bookingUrl = (data.bookingUrl as string) || "https://visaroute.com";
+  const slots = (data.slots as Array<{ date?: string; time?: string; city?: string }>) || [];
+
+  const tableRows = slots
+    .slice(0, 10)
+    .map(
+      (s) => `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#1e293b">${s.date ?? "—"}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#1e293b">${s.time ?? "—"}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#1e293b">${s.city ?? city}</td>
+    </tr>`,
+    )
+    .join("");
+
+  const body = [
+    p(`New visa appointment slots have been detected for <strong>${countryName}${city ? ` (${city})` : ""}</strong>:`),
+    `<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin:0 0 16px;border-collapse:collapse">
+      <thead>
+        <tr style="background:#f8fafc">
+          <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:13px;font-weight:600">Date</th>
+          <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:13px;font-weight:600">Time</th>
+          <th style="padding:8px 12px;text-align:left;color:#64748b;font-size:13px;font-weight:600">Location</th>
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>`,
+    p(`Provider: <strong>${provider}</strong>`),
+    `<div style="text-align:center;margin:24px 0">
+      <a href="${bookingUrl}" style="display:inline-block;background:${BRAND_COLOR};color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">
+        Book Now &rarr;
+      </a>
+    </div>`,
+    p('<span style="color:#94a3b8;font-size:13px">Slots fill up fast. You received this because you subscribed to appointment alerts on VisaRoute.</span>'),
+  ].join("");
+
+  const text = [
+    `Visa Appointment Available — ${countryName}${city ? ` (${city})` : ""}`,
+    "",
+    slots
+      .slice(0, 10)
+      .map((s) => `${s.date ?? "—"}  ${s.time ?? ""}  ${s.city ?? city}`.trim())
+      .join("\n"),
+    "",
+    `Book now: ${bookingUrl}`,
+    "",
+    "— VisaRoute",
+  ].join("\n");
+
+  return {
+    subject: `Visa Appointment Available — ${countryName}${city ? ` (${city})` : ""}`,
+    html: layout(`Appointment Available: ${countryName}`, body),
+    text,
+  };
+}

@@ -180,10 +180,19 @@ Check functions read these via `ctx.ruleParams[ruleCode]` and use defaults if no
 
 ### Phase 8: Appointment Monitoring (Post-Launch)
 
-1. Appointment scraper framework (TLScontact, VFS Global, iDATA, BLS)
-2. Availability snapshot storage
-3. Alert matching & notification (email/Telegram)
-4. User-facing availability dashboard
+**Full plan:** See `docs/PHASE-8-APPOINTMENT-MONITORING.md`
+
+**Summary:** Cloudflare Browser Rendering REST API (primary) + ScrapingBee (fallback) for scraping TLScontact, VFS Global, BLS, iDATA. Config-driven scraper with cron triggers. Email notifications via existing Resend system. New models: ScraperConfig, ScraperRun. Schema extensions to AppointmentAlertSubscription and AppointmentAvailabilitySnapshot.
+
+**Implementation order:**
+1. Schema changes (ScraperConfig, ScraperRun, subscription extensions)
+2. CF Browser Rendering client (`/scrape`, `/json`, `/content` wrappers)
+3. Provider-specific parsers (URL builders + slot parsers)
+4. Scraper service (orchestration, diffing, notification dispatch)
+5. Cron route + subscription API + availability API
+6. Email template for appointment alerts
+7. Seed configs for UK-based applicants
+8. Wire frontend appointment alert UI to real endpoints
 
 ### Admin Operations Panel (can be done independently)
 

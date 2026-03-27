@@ -30,6 +30,10 @@ export async function POST(
 
     const file = formData.get("file");
     const documentType = formData.get("documentType");
+    // Optional applicant context for validation
+    const applicantName = formData.get("applicantName");
+    const travelStartDate = formData.get("travelStartDate");
+    const travelEndDate = formData.get("travelEndDate");
 
     if (!file || !(file instanceof File)) {
       return jsonResponse(
@@ -41,12 +45,21 @@ export async function POST(
     const parsed = uploadDocumentSchema.parse({ documentType });
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    const document = await documentsService.uploadDocument(draftToken, parsed.documentType, {
-      buffer,
-      originalFileName: file.name,
-      mimeType: file.type,
-      size: buffer.length,
-    });
+    const document = await documentsService.uploadDocument(
+      draftToken,
+      parsed.documentType,
+      {
+        buffer,
+        originalFileName: file.name,
+        mimeType: file.type,
+        size: buffer.length,
+      },
+      {
+        applicantName: typeof applicantName === "string" ? applicantName : null,
+        travelStartDate: typeof travelStartDate === "string" ? travelStartDate : null,
+        travelEndDate: typeof travelEndDate === "string" ? travelEndDate : null,
+      },
+    );
 
     return jsonResponse({ document }, { status: 201 });
   } catch (error) {

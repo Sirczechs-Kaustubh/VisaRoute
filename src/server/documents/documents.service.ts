@@ -3,7 +3,9 @@ import { DocumentsRepository } from "./documents.repository";
 import { getStorage, generateStorageKey } from "./storage";
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES, MAX_DOCUMENTS_PER_APPLICATION } from "./documents.schemas";
 import { runExtraction } from "./extraction";
+import { validateBuffer, isValidatable } from "./validation";
 import type { ExtractionResult } from "./extraction";
+import type { ValidationResult } from "./validation";
 
 const EXTRACTABLE_DOC_TYPES = ["passport", "passport_back", "brp", "visa_vignette", "evisa", "residence_permit"];
 
@@ -46,6 +48,11 @@ export class DocumentsService {
       mimeType: string;
       size: number;
     },
+    applicantContext?: {
+      applicantName?: string | null;
+      travelStartDate?: string | null;
+      travelEndDate?: string | null;
+    },
   ) {
     const application = await this.repository.findApplicationByDraftToken(draftToken);
     if (!application) {
@@ -53,7 +60,7 @@ export class DocumentsService {
     }
 
     if (!ALLOWED_MIME_TYPES.includes(file.mimeType as typeof ALLOWED_MIME_TYPES[number])) {
-      throw new ApiError(400, "INVALID_FILE_TYPE", `File type '${file.mimeType}' is not allowed. Accepted: JPEG, PNG, PDF`);
+      throw new ApiError(400, "INVALID_FILE_TYPE", `File type '${file.mimeType}' is not allowed. Accepted: JPEG, PNG, PDF, DOCX`);
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -63,6 +70,29 @@ export class DocumentsService {
     const existingDocs = await this.repository.findDocumentsByApplicationId(application.id);
     if (existingDocs.length >= MAX_DOCUMENTS_PER_APPLICATION) {
       throw new ApiError(400, "TOO_MANY_DOCUMENTS", `Maximum ${MAX_DOCUMENTS_PER_APPLICATION} documents allowed per application`);
+    }
+
+    // ── Pre-upload validation for applicable document types ──────────────────
+    // Run vision validation BEFORE saving — reject clearly fake/sample documents.
+    let validation: ValidationResult | null = null;
+    if (isValidatable(documentType)) {
+      validation = await validateBuffer(
+        file.buffer,
+        file.mimeType,
+        {
+          documentType,
+          applicantName: applicantContext?.applicantName ?? null,
+          travelStartDate: applicantContext?.travelStartDate ?? null,
+          travelEndDate: applicantContext?.travelEndDate ?? null,
+        },
+      );
+
+      if (validation?.status === "FAILED") {
+        const reason = validation.issues.length > 0
+          ? validation.issues.join(". ")
+          : "Document appears to be a sample, template, or specimen form and cannot be accepted.";
+        throw new ApiError(422, "DOCUMENT_VALIDATION_FAILED", reason);
+      }
     }
 
     // For single-instance doc types, replace existing
@@ -89,7 +119,18 @@ export class DocumentsService {
       fileSizeBytes: file.size,
     });
 
-    // Trigger extraction asynchronously for extractable doc types
+    // Store validation result in DocumentExtraction if we have one
+    if (validation) {
+      await this.repository.createExtraction({
+        documentId: document.id,
+        extractorVersion: "v2-validation",
+        rawPayload: JSON.stringify({ documentType }),
+        normalizedPayload: JSON.stringify(validation),
+        confidence: validation.confidence,
+      }).catch(() => {});
+    }
+
+    // Run MRZ/text extraction for passport-type documents
     let extraction: ExtractionResult | null = null;
     if (EXTRACTABLE_DOC_TYPES.includes(documentType)) {
       extraction = await runExtraction(document.id).catch(() => null);
@@ -97,6 +138,9 @@ export class DocumentsService {
 
     return {
       ...mapDocument(document),
+      validation: validation
+        ? { status: validation.status, issues: validation.issues, warnings: validation.warnings }
+        : null,
       extraction: extraction
         ? { type: extraction.type, data: extraction.data, confidence: extraction.confidence }
         : null,

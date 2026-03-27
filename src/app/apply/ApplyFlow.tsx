@@ -34,6 +34,11 @@ export interface UploadedDocument {
     data: Record<string, string | null>;
     confidence: number;
   } | null;
+  validation?: {
+    status: "PASSED" | "WARNING" | "FAILED";
+    issues: string[];
+    warnings: string[];
+  } | null;
 }
 
 export interface ApplicationData {
@@ -60,6 +65,15 @@ export interface ApplicationData {
   employmentStatus: string;
   documents: Record<string, { file: File; name: string }>;
   uploadedDocuments: UploadedDocument[];
+  // Passport extracted details (populated when user applies extraction in Step 2)
+  passportNumber: string;
+  passportNationality: string;
+  passportDateOfBirth: string;
+  passportSex: string;
+  passportExpiryDate: string;
+  passportIssuingCountry: string;
+  passportIssueDate: string;
+  passportIssuePlace: string;
 }
 
 export const STEPS = [
@@ -124,6 +138,14 @@ function emptyApplicationData(): ApplicationData {
     employmentStatus: "",
     documents: {},
     uploadedDocuments: [],
+    passportNumber: "",
+    passportNationality: "",
+    passportDateOfBirth: "",
+    passportSex: "",
+    passportExpiryDate: "",
+    passportIssuingCountry: "",
+    passportIssueDate: "",
+    passportIssuePlace: "",
   };
 }
 
@@ -291,6 +313,11 @@ export function ApplyFlow({
     const formData = new FormData();
     formData.append("file", file);
     formData.append("documentType", documentType);
+    // Pass applicant context so server can validate name/date matches
+    const fullName = [data.firstName, data.lastName].filter(Boolean).join(" ");
+    if (fullName) formData.append("applicantName", fullName);
+    if (data.travelStartDate) formData.append("travelStartDate", data.travelStartDate);
+    if (data.travelEndDate) formData.append("travelEndDate", data.travelEndDate);
     try {
       const response = await fetch(`/api/applications/${draftToken}/documents`, {
         method: "POST",
@@ -351,8 +378,26 @@ export function ApplyFlow({
       throw new Error(payload.error?.message ?? "Could not save your progress");
     }
 
-    setStep(migrateStepNumber(payload.application.currentStep));
+    // Use nextStep directly — migrateStepNumber is only for loading old drafts
+    setStep(nextStep);
     setSaveMessage("Progress saved");
+  }
+
+  // Step 3 (Residence/BRP) is only required for UK residents
+  const isUKResident = data.countryOfResidence === "gb";
+
+  function getNextStep(current: number): number {
+    const raw = current + 1;
+    // Skip Step 3 for non-UK residents (BRP step is UK-only)
+    if (raw === 3 && !isUKResident) return 4;
+    return raw;
+  }
+
+  function getPrevStep(current: number): number {
+    const raw = current - 1;
+    // Skip Step 3 going backwards for non-UK residents
+    if (raw === 3 && !isUKResident) return 2;
+    return raw;
   }
 
   function handleNext() {
@@ -360,7 +405,7 @@ export function ApplyFlow({
       return;
     }
 
-    const nextStep = step + 1;
+    const nextStep = getNextStep(step);
     startSaving(async () => {
       try {
         await persistDraft(nextStep);
@@ -376,7 +421,7 @@ export function ApplyFlow({
       return;
     }
 
-    const previousStep = step - 1;
+    const previousStep = getPrevStep(step);
     startSaving(async () => {
       try {
         await persistDraft(previousStep);
@@ -411,6 +456,12 @@ export function ApplyFlow({
         purpose={data.purposeOfTravel}
         applicantName={[data.firstName, data.lastName].filter(Boolean).join(" ") || undefined}
         companionsCount={data.travellingWithCompanions === "yes" ? data.companionsCount : 0}
+        isUKResident={isUKResident}
+        uploadedDocTypes={data.uploadedDocuments.map((d) => d.documentType)}
+        hasRefusals={data.previousVisaRejections === "yes" && data.refusalDetails.length > 0}
+        hasPriorVisits={data.visitedSchengenBefore === "yes" && data.previousTravelVisits.length > 0}
+        employmentStatus={data.employmentStatus}
+        profileComplete={!!(data.firstName && data.lastName && data.email && data.purposeOfTravel && data.travelStartDate && data.travelEndDate)}
       />
 
       <div className="flex flex-1 flex-col bg-slate-50/90">

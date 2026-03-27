@@ -93,21 +93,20 @@ export function Step12Pack({
 
       <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 10 of 11</p>
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-        Generate your visa application pack.
+        Application checklist &amp; summary.
       </h1>
       <p className="mt-2 text-slate-600">
-        We&apos;ll produce a complete, ready-to-submit document pack as editable Word files.
+        We&apos;ll produce a document checklist and full application summary as editable Word files — confirming everything is in order before you submit.
       </p>
 
       {!pack && (
         <>
           <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">What will be generated</h2>
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[
-                { icon: "✉️", label: "Cover letter", desc: "AI-personalised, editable .docx" },
-                { icon: "✅", label: "Document checklist", desc: "Status of all uploads" },
-                { icon: "📋", label: "Application summary", desc: "Full details overview" },
+                { icon: "✅", label: "Document checklist", desc: "Status of all your uploaded documents with completeness check" },
+                { icon: "📋", label: "Application summary", desc: "Full overview of your application details" },
               ].map((item) => (
                 <div key={item.label} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4">
                   <span className="text-2xl">{item.icon}</span>
@@ -117,13 +116,6 @@ export function Step12Pack({
                   </div>
                 </div>
               ))}
-            </div>
-
-            <div className="mt-6 rounded-xl border border-primary-200 bg-primary-50/50 p-4">
-              <p className="flex items-start gap-2 text-sm text-slate-700">
-                <span className="text-primary-600">!</span>
-                Your cover letter references prior Schengen visits and addresses any refusal history — increasing approval probability.
-              </p>
             </div>
           </div>
 
@@ -146,7 +138,7 @@ export function Step12Pack({
               </>
             ) : (
               <>
-                <span>✨</span> Generate my visa pack
+                <span>✨</span> Generate checklist &amp; summary
               </>
             )}
           </button>

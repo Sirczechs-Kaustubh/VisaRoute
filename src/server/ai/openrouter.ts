@@ -97,3 +97,65 @@ export async function generateText(
   );
   return result.content;
 }
+
+/**
+ * Vision-enabled chat completion — sends an image alongside a text prompt.
+ * Uses the OpenAI multimodal message format supported by OpenRouter.
+ * Compatible with gemini-2.0-flash-001, claude-3-haiku, gpt-4o-mini, etc.
+ */
+export async function chatCompletionWithVision(
+  systemPrompt: string,
+  userText: string,
+  imageBase64: string,
+  mimeType: string,
+  options: OpenRouterOptions = {},
+): Promise<{ content: string; tokensUsed: number }> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is not set");
+  }
+
+  const response = await fetch(OPENROUTER_BASE_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "HTTP-Referer": "https://visaroute.com",
+      "X-Title": "VisaRoute",
+    },
+    body: JSON.stringify({
+      model: options.model ?? DEFAULT_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${imageBase64}` },
+            },
+            { type: "text", text: userText },
+          ],
+        },
+      ],
+      temperature: options.temperature ?? 0.1,
+      max_tokens: options.maxTokens ?? 800,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenRouter vision API error (${response.status}): ${errorText}`);
+  }
+
+  const data = (await response.json()) as OpenRouterResponse;
+
+  if (!data.choices?.[0]?.message?.content) {
+    throw new Error("OpenRouter returned empty vision response");
+  }
+
+  return {
+    content: data.choices[0].message.content,
+    tokensUsed: data.usage?.total_tokens ?? 0,
+  };
+}

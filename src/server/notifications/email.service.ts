@@ -4,6 +4,7 @@ import {
   buildSubmissionEmail,
   buildPaymentEmail,
   buildPackReadyEmail,
+  buildAppointmentAlertEmail,
 } from "./email.templates";
 
 const resend = process.env.RESEND_API_KEY
@@ -12,7 +13,7 @@ const resend = process.env.RESEND_API_KEY
 
 const FROM_ADDRESS = process.env.EMAIL_FROM ?? "VisaRoute <noreply@visaroute.com>";
 
-export type EmailType = "submission_confirmed" | "payment_confirmed" | "pack_ready";
+export type EmailType = "submission_confirmed" | "payment_confirmed" | "pack_ready" | "appointment_alert";
 
 interface SendEmailOptions {
   to: string;
@@ -48,6 +49,8 @@ function buildEmail(type: EmailType, data: Record<string, unknown>) {
       return buildPaymentEmail(data);
     case "pack_ready":
       return buildPackReadyEmail(data);
+    case "appointment_alert":
+      return buildAppointmentAlertEmail(data);
   }
 }
 

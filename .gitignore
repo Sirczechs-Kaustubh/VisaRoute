@@ -37,3 +37,9 @@ Thumbs.db
 # Uploads
 uploads/
 .claude
+.claude-flow
+.mcp
+.swarm
+CLAUDE.md
+.env.example
+.mcp

@@ -27,9 +27,10 @@ export class SubmitService {
       };
     }
 
-    if (application.orders.length === 0) {
-      throw new ApiError(400, "PAYMENT_REQUIRED", "Please complete payment before submitting");
-    }
+    // TODO: Re-enable payment check once Stripe integration is complete
+    // if (application.orders.length === 0) {
+    //   throw new ApiError(400, "PAYMENT_REQUIRED", "Please complete payment before submitting");
+    // }
 
     const submissionRef = `VR-${new Date().getFullYear()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
 

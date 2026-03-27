@@ -85,6 +85,8 @@ function ExtractionPreview({
   extraction: { data: Record<string, string | null>; confidence: number };
   onApply: (data: Record<string, string | null>) => void;
 }) {
+  const [applied, setApplied] = useState(false);
+
   const fields: ExtractedField[] = [
     { label: "First name", key: "firstName", value: extraction.data.firstName },
     { label: "Last name", key: "lastName", value: extraction.data.lastName },
@@ -92,6 +94,8 @@ function ExtractionPreview({
     { label: "Nationality", key: "nationality", value: extraction.data.nationality },
     { label: "Date of birth", key: "dateOfBirth", value: extraction.data.dateOfBirth },
     { label: "Sex", key: "sex", value: extraction.data.sex },
+    { label: "Issue date", key: "issueDate", value: extraction.data.issueDate },
+    { label: "Issue place", key: "issuePlace", value: extraction.data.issuePlace },
     { label: "Expiry date", key: "expiryDate", value: extraction.data.expiryDate },
     { label: "Issuing country", key: "issuingCountry", value: extraction.data.issuingCountry },
   ];
@@ -113,7 +117,7 @@ function ExtractionPreview({
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-emerald-800">Extracted passport data</h3>
         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-          {extractedCount}/8 fields
+          {extractedCount}/10 fields
         </span>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -126,13 +130,20 @@ function ExtractionPreview({
           </div>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={() => onApply(extraction.data)}
-        className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-      >
-        Apply to my application
-      </button>
+      {applied ? (
+        <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-100 px-4 py-2">
+          <span className="text-emerald-700">✓</span>
+          <span className="text-sm font-medium text-emerald-800">Details confirmed — you can continue to the next step</span>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setApplied(true); onApply(extraction.data); }}
+          className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+        >
+          Confirm & apply to my application
+        </button>
+      )}
     </div>
   );
 }
@@ -205,6 +216,14 @@ export function Step2Passport({
     const updates: Partial<ApplicationData> = {};
     if (extractedData.firstName) updates.firstName = extractedData.firstName;
     if (extractedData.lastName) updates.lastName = extractedData.lastName;
+    if (extractedData.passportNumber) updates.passportNumber = extractedData.passportNumber;
+    if (extractedData.nationality) updates.passportNationality = extractedData.nationality;
+    if (extractedData.dateOfBirth) updates.passportDateOfBirth = extractedData.dateOfBirth;
+    if (extractedData.sex) updates.passportSex = extractedData.sex;
+    if (extractedData.expiryDate) updates.passportExpiryDate = extractedData.expiryDate;
+    if (extractedData.issuingCountry) updates.passportIssuingCountry = extractedData.issuingCountry;
+    if (extractedData.issueDate) updates.passportIssueDate = extractedData.issueDate;
+    if (extractedData.issuePlace) updates.passportIssuePlace = extractedData.issuePlace;
     updateData(updates);
   };
 

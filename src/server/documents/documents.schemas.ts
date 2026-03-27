@@ -4,6 +4,7 @@ export const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",
   "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ] as const;
 
 export const DOCUMENT_TYPES = [
@@ -21,11 +22,19 @@ export const DOCUMENT_TYPES = [
   "invitation_letter",
   "cover_letter",
   "photo",
+  "payslip",
+  "business_registration",
+  "tax_returns",
+  "business_bank_statement",
+  "profit_loss",
+  "accountant_letter",
+  "appointment_letter",
+  "holiday_letter",
   "other",
 ] as const;
 
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-export const MAX_DOCUMENTS_PER_APPLICATION = 20;
+export const MAX_DOCUMENTS_PER_APPLICATION = 30;
 
 export const uploadDocumentSchema = z.object({
   documentType: z.enum(DOCUMENT_TYPES),
