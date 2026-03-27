@@ -13,6 +13,12 @@ interface ApplySidebarProps {
   purpose?: string;
   applicantName?: string;
   companionsCount?: number;
+  isUKResident?: boolean;
+  uploadedDocTypes?: string[];
+  hasRefusals?: boolean;
+  hasPriorVisits?: boolean;
+  employmentStatus?: string;
+  profileComplete?: boolean;
 }
 
 const PURPOSE_LABELS: Record<string, string> = {
@@ -33,13 +39,32 @@ export function ApplySidebar({
   purpose,
   applicantName,
   companionsCount = 0,
+  isUKResident = true,
+  uploadedDocTypes = [],
+  hasRefusals = false,
+  hasPriorVisits = false,
+  employmentStatus = "",
+  profileComplete = false,
 }: ApplySidebarProps) {
   const [showFactors, setShowFactors] = useState(false);
   const total = visaFeeEur + serviceFeeEur;
 
-  // Dynamic success estimate based on step progress
-  const baseEstimate = Math.min(90, 20 + (currentStep - 1) * 7);
-  const successEstimate = baseEstimate;
+  // Data-driven success probability
+  const docSet = new Set(uploadedDocTypes);
+  let successEstimate = 35;
+  if (profileComplete) successEstimate += 5;
+  if (docSet.has("passport")) successEstimate += 10;
+  if (docSet.has("brp") || docSet.has("evisa") || docSet.has("visa_vignette") || docSet.has("residence_permit")) successEstimate += 8;
+  if (docSet.has("bank_statement") || docSet.has("business_bank_statement")) successEstimate += 8;
+  if (docSet.has("travel_insurance")) successEstimate += 5;
+  if (docSet.has("flight_booking")) successEstimate += 4;
+  if (docSet.has("accommodation_proof")) successEstimate += 4;
+  if (docSet.has("payslip") || docSet.has("employment_letter")) successEstimate += 5;
+  if (docSet.has("cover_letter")) successEstimate += 4;
+  if (hasPriorVisits) successEstimate += 5;
+  if (hasRefusals) successEstimate -= 10;
+  if (!employmentStatus) successEstimate -= 3;
+  successEstimate = Math.max(10, Math.min(92, successEstimate));
   const successLabel =
     successEstimate >= 70 ? "Strong" : successEstimate >= 45 ? "Moderate" : "Needs work";
   const successColor =
@@ -103,10 +128,14 @@ export function ApplySidebar({
           </button>
           {showFactors && (
             <div className="mt-2 rounded-lg bg-slate-800 p-3 text-xs text-slate-400 space-y-1">
-              <p>+ Complete all required documents</p>
-              <p>+ Prior Schengen visits boost approval</p>
-              <p>+ Declare any refusals honestly</p>
-              <p>+ Strong cover letter with AI personalisation</p>
+              {docSet.has("passport") ? <p className="text-emerald-400">✓ Passport uploaded</p> : <p className="text-rose-400">✗ Passport missing</p>}
+              {(docSet.has("brp") || docSet.has("evisa") || docSet.has("visa_vignette") || docSet.has("residence_permit")) ? <p className="text-emerald-400">✓ Residence doc uploaded</p> : isUKResident ? <p className="text-rose-400">✗ BRP / eVisa missing</p> : null}
+              {(docSet.has("bank_statement") || docSet.has("business_bank_statement")) ? <p className="text-emerald-400">✓ Bank statements uploaded</p> : <p className="text-amber-400">⚠ Bank statements recommended</p>}
+              {docSet.has("travel_insurance") ? <p className="text-emerald-400">✓ Travel insurance uploaded</p> : <p className="text-amber-400">⚠ Travel insurance recommended</p>}
+              {docSet.has("flight_booking") ? <p className="text-emerald-400">✓ Flight booking uploaded</p> : <p className="text-amber-400">⚠ Flight booking recommended</p>}
+              {hasPriorVisits && <p className="text-emerald-400">✓ Prior Schengen visits (positive)</p>}
+              {hasRefusals && <p className="text-rose-400">✗ Prior visa refusals (risk factor)</p>}
+              {employmentStatus ? <p className="text-emerald-400">✓ Employment status declared</p> : <p className="text-amber-400">⚠ Employment status missing</p>}
             </div>
           )}
         </div>
@@ -118,7 +147,8 @@ export function ApplySidebar({
           </p>
           <nav className="mt-3 space-y-0.5">
             {STEPS.map((s) => {
-              const isComplete = s.id < currentStep;
+              const isSkipped = s.id === 3 && !isUKResident;
+              const isComplete = s.id < currentStep && !isSkipped;
               const isCurrent = s.id === currentStep;
               return (
                 <div
@@ -129,14 +159,18 @@ export function ApplySidebar({
                 >
                   <span
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition ${
-                      isComplete
+                      isSkipped
+                        ? "bg-slate-700 text-slate-600"
+                        : isComplete
                         ? "bg-primary-500 text-white"
                         : isCurrent
                         ? "bg-white text-slate-900"
                         : "bg-slate-700 text-slate-500"
                     }`}
                   >
-                    {isComplete ? (
+                    {isSkipped ? (
+                      "–"
+                    ) : isComplete ? (
                       <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                       </svg>
@@ -146,7 +180,9 @@ export function ApplySidebar({
                   </span>
                   <span
                     className={`text-sm ${
-                      isComplete
+                      isSkipped
+                        ? "text-slate-600 line-through"
+                        : isComplete
                         ? "text-slate-400"
                         : isCurrent
                         ? "font-medium text-white"
@@ -154,6 +190,7 @@ export function ApplySidebar({
                     }`}
                   >
                     {s.label}
+                    {isSkipped && <span className="ml-1 text-xs normal-case no-underline" style={{ textDecoration: "none" }}>(N/A)</span>}
                   </span>
                 </div>
               );

@@ -109,44 +109,86 @@ export const checkPassportExpiry: CheckFunction = (ctx) => {
 
 /**
  * Check: Required documents are present.
- * Document lists are configurable per country group.
+ * Profile-aware: builds required/recommended lists from applicant profile data.
+ * Handles scenarios like: Indian passport holder, UK resident on graduate visa, tourism to France.
  */
 export const checkRequiredDocuments: CheckFunction = (ctx) => {
-  const params = ctx.ruleParams["required_documents"] ?? {};
   const uploadedTypes = new Set(
     ctx.documents.filter((d) => d.uploadStatus !== "DELETED").map((d) => d.documentType)
   );
 
-  // Required docs — from rule params or defaults
-  const requiredChecks: { type: string | string[]; label: string }[] = params.requiredDocTypes
-    ? (params.requiredDocTypes as unknown as { type: string | string[]; label: string }[])
-    : [
-        { type: "passport", label: "Passport" },
-        { type: ["brp", "visa_vignette", "evisa", "residence_permit"], label: "Residence permit / BRP" },
-      ];
+  const profile = ctx.application.applicantProfile;
+  const employment = ctx.application.employmentProfile;
+  const purpose = profile?.purposeOfTravel ?? null;
+  const residenceCountry = profile?.countryOfResidence ?? null;
+  const applyingFrom = ctx.application.applyingFromCountry ?? null;
+  const employmentStatus = employment?.employmentStatus ?? null;
 
-  // Recommended docs — from rule params or defaults
-  const defaultRecommended = [
-    { type: "travel_insurance", label: "Travel insurance" },
-    { type: "flight_booking", label: "Flight reservation" },
-    { type: "accommodation_proof", label: "Accommodation proof" },
-    { type: "bank_statement", label: "Bank statements" },
+  // Determine if applicant is a third-country national applying from a non-Schengen country
+  // e.g. UK resident, US resident, Indian national living in UK
+  const isApplyingFromAbroad = !!(applyingFrom || residenceCountry);
+  const isUKResident = residenceCountry === "gb" || applyingFrom === "gb";
+
+  // ── Required documents ────────────────────────────────────────────────────
+  const required: { type: string | string[]; label: string; condition?: boolean }[] = [
+    { type: "passport", label: "Passport" },
+    // Residence doc required for anyone applying from a non-Schengen country
+    {
+      type: ["brp", "evisa", "visa_vignette", "residence_permit"],
+      label: isUKResident ? "UK BRP / eVisa / Residence permit" : "Residence / immigration document",
+      condition: isApplyingFromAbroad,
+    },
   ];
-  const recommended: { type: string; label: string }[] = params.recommendedDocTypes
-    ? (params.recommendedDocTypes as unknown as { type: string; label: string }[])
-    : defaultRecommended;
 
+  // Employment-based required documents
+  if (employmentStatus === "employed") {
+    required.push({ type: ["payslip", "employment_letter"], label: "Payslip or employment letter" });
+  } else if (employmentStatus === "self_employed") {
+    required.push(
+      { type: ["business_registration", "business_bank_statement", "profit_loss"], label: "Self-employment proof (business docs)" }
+    );
+  } else if (employmentStatus === "student") {
+    required.push({ type: ["student_enrollment", "employment_letter"], label: "Student enrollment / institution letter" });
+  } else if (employmentStatus === "unemployed") {
+    required.push({ type: "bank_statement", label: "Bank statement (proof of funds)" });
+  }
+
+  // ── Recommended documents (based on purpose) ──────────────────────────────
+  const recommended: { type: string; label: string }[] = [];
+
+  if (purpose === "tourism" || purpose === "visiting" || !purpose) {
+    recommended.push({ type: "travel_insurance", label: "Travel insurance" });
+    recommended.push({ type: "flight_booking", label: "Flight reservation" });
+    recommended.push({ type: "accommodation_proof", label: "Accommodation proof" });
+    if (employmentStatus !== "unemployed") {
+      recommended.push({ type: "bank_statement", label: "Bank statements" });
+    }
+    recommended.push({ type: "cover_letter", label: "Cover letter" });
+  } else if (purpose === "business") {
+    recommended.push({ type: "travel_insurance", label: "Travel insurance" });
+    recommended.push({ type: "flight_booking", label: "Flight reservation" });
+    recommended.push({ type: "accommodation_proof", label: "Accommodation / hotel booking" });
+    recommended.push({ type: "bank_statement", label: "Bank statements" });
+  } else if (purpose === "study") {
+    recommended.push({ type: "travel_insurance", label: "Travel insurance" });
+    recommended.push({ type: "flight_booking", label: "Flight reservation" });
+    recommended.push({ type: "bank_statement", label: "Bank statements (proof of funds)" });
+  } else {
+    // Fallback
+    recommended.push({ type: "travel_insurance", label: "Travel insurance" });
+    recommended.push({ type: "flight_booking", label: "Flight reservation" });
+    recommended.push({ type: "accommodation_proof", label: "Accommodation proof" });
+    recommended.push({ type: "bank_statement", label: "Bank statements" });
+  }
+
+  // ── Evaluate required ─────────────────────────────────────────────────────
   const missing: string[] = [];
 
-  for (const req of requiredChecks) {
+  for (const req of required) {
+    if (req.condition === false) continue;
     if (Array.isArray(req.type)) {
-      // Any one of these types satisfies the requirement
       const hasAny = req.type.some((t) => uploadedTypes.has(t));
-      if (!hasAny) {
-        // Skip residence requirement if not applying from abroad
-        if (req.label.includes("Residence") && !ctx.application.applyingFromCountry) continue;
-        missing.push(req.label);
-      }
+      if (!hasAny) missing.push(req.label);
     } else {
       if (!uploadedTypes.has(req.type)) missing.push(req.label);
     }

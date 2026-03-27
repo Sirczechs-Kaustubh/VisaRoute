@@ -71,6 +71,20 @@ enum SubscriptionStatus {
   UNSUBSCRIBED
 }
 
+enum ScraperProvider {
+  TLSCONTACT
+  VFS_GLOBAL
+  BLS
+  IDATA
+}
+
+enum ScraperRunStatus {
+  SUCCESS
+  PARTIAL
+  FAILED
+  BLOCKED
+}
+
 model CountryGroup {
   id                    String   @id @default(cuid())
   code                  String   @unique
@@ -293,23 +307,26 @@ model RefusalHistoryEntry {
 }
 
 model AppointmentAlertSubscription {
-  id         String             @id @default(cuid())
-  countryId  String
-  visaTypeId String?
-  email      String
-  channel    AlertChannel       @default(EMAIL)
-  status     SubscriptionStatus @default(ACTIVE)
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
-  country    Country            @relation(fields: [countryId], references: [id], onDelete: Cascade)
-  visaType   VisaType?          @relation(fields: [visaTypeId], references: [id], onDelete: SetNull)
+  id               String             @id @default(cuid())
+  countryId        String
+  visaTypeId       String?
+  email            String
+  channel          AlertChannel       @default(EMAIL)
+  status           SubscriptionStatus @default(ACTIVE)
+  residenceCountry String?
+  city             String?
+  provider         String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  country          Country            @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  visaType         VisaType?          @relation(fields: [visaTypeId], references: [id], onDelete: SetNull)
 
   @@index([countryId])
   @@index([email])
 }
 
 model AppointmentAvailabilitySnapshot {
-  id                String    @id @default(cuid())
+  id                String         @id @default(cuid())
   countryId         String
   visaTypeId        String?
   status            String
@@ -317,12 +334,53 @@ model AppointmentAvailabilitySnapshot {
   checkedAt         DateTime
   confidence        Float?
   rawPayload        String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  country           Country   @relation(fields: [countryId], references: [id], onDelete: Cascade)
-  visaType          VisaType? @relation(fields: [visaTypeId], references: [id], onDelete: SetNull)
+  provider          String?
+  city              String?
+  scraperConfigId   String?
+  slotsCount        Int            @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  country           Country        @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  visaType          VisaType?      @relation(fields: [visaTypeId], references: [id], onDelete: SetNull)
+  scraperConfig     ScraperConfig? @relation(fields: [scraperConfigId], references: [id], onDelete: SetNull)
 
   @@index([countryId, checkedAt])
+  @@index([scraperConfigId])
+}
+
+model ScraperConfig {
+  id               String          @id @default(cuid())
+  provider         ScraperProvider
+  countrySlug      String
+  residenceCountry String
+  city             String
+  targetUrl        String
+  selectors        String?
+  useAIExtraction  Boolean         @default(false)
+  isActive         Boolean         @default(true)
+  checkIntervalMin Int             @default(30)
+  lastCheckedAt    DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  scraperRuns      ScraperRun[]
+  snapshots        AppointmentAvailabilitySnapshot[]
+
+  @@unique([provider, countrySlug, residenceCountry, city])
+  @@index([isActive])
+}
+
+model ScraperRun {
+  id           String           @id @default(cuid())
+  configId     String
+  status       ScraperRunStatus
+  slotsFound   Int              @default(0)
+  rawPayload   String?
+  errorMessage String?
+  durationMs   Int?
+  createdAt    DateTime         @default(now())
+  config       ScraperConfig    @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId, createdAt])
 }
 
 model ApplicationDocument {
@@ -335,6 +393,8 @@ model ApplicationDocument {
   fileSizeBytes    Int
   uploadStatus     DocumentUploadStatus @default(UPLOADED)
   extractionStatus ExtractionStatus     @default(NOT_STARTED)
+  validationStatus  String?
+  validationPayload String?
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
   application      Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
