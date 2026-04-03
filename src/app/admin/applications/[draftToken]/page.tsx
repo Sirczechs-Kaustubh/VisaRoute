@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { requireAdminSession } from "@/lib/admin-auth";
 import { db } from "@/db/client";
 import { getStorage } from "@/server/documents/storage";
