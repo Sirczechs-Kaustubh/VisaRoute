@@ -1,0 +1,24 @@
+[Unit]
+Description=VisaRoute Next.js Application
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/visaroute
+Environment="NODE_ENV=production"
+Environment="PORT=3000"
+ExecStart=/usr/bin/npm start
+ExecReload=/usr/bin/npm run build
+ExecStop=/usr/bin/pm2 stop visaroute
+Restart=always
+RestartSec=10
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

@@ -3,6 +3,12 @@ import { ScraperProvider, ScraperRunStatus } from "@prisma/client";
 import type { AppointmentSlot } from "./providers/base";
 
 export class ScraperRepository {
+  async getConfig(configId: string) {
+    return db.scraperConfig.findUnique({
+      where: { id: configId },
+    });
+  }
+
   async getDueConfigs() {
     const now = new Date();
     const configs = await db.scraperConfig.findMany({

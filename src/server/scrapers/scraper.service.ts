@@ -1,5 +1,12 @@
 import { ScraperRunStatus } from "@prisma/client";
-import { cfScrape, cfJsonExtract } from "./cloudflare-browser";
+import {
+  scrapeTLSContactFrance,
+  scrapeTLSContactGermany,
+  scrapeVFSItaly,
+  scrapeVFSSpain,
+  scrapeBLSSpain,
+  type ScrapeResult,
+} from "./playwright-stealth";
 import { TLScontactProvider } from "./providers/tlscontact";
 import { VFSGlobalProvider } from "./providers/vfs-global";
 import { BLSProvider } from "./providers/bls";
@@ -17,6 +24,16 @@ const PROVIDERS: Record<string, VisaProvider> = {
   IDATA: IDataProvider,
 };
 
+export type ScrapeFunction = () => Promise<ScrapeResult>;
+
+const SCRAPE_FUNCTIONS: Record<string, ScrapeFunction> = {
+  "tlscontact-france": scrapeTLSContactFrance,
+  "tlscontact-germany": scrapeTLSContactGermany,
+  "vfs-italy": scrapeVFSItaly,
+  "vfs-spain": scrapeVFSSpain,
+  "bls-spain": scrapeBLSSpain,
+};
+
 export class ScraperService {
   constructor(private readonly repo = new ScraperRepository()) {}
 
@@ -32,28 +49,20 @@ export class ScraperService {
       let errorMessage: string | undefined;
 
       try {
-        // 1. Scrape via CF Browser Rendering
-        const defaultSelectors = [
-          { selector: ".appointment-slot" },
-          { selector: ".dispo" },
-          { selector: ".calendar-day" },
-        ];
-        const selectors = config.selectors ? JSON.parse(config.selectors) : defaultSelectors;
+        const scrapeKey = `${config.provider.toLowerCase()}-${config.countrySlug.toLowerCase()}`;
+        const scrapeFn = SCRAPE_FUNCTIONS[scrapeKey];
 
-        const raw = config.useAIExtraction
-          ? await cfJsonExtract(config.targetUrl)
-          : await cfScrape(config.targetUrl, { selectors });
+        let slots: AppointmentSlot[] = [];
 
-        rawPayload = JSON.stringify(raw).slice(0, 2000);
+        if (scrapeFn) {
+          const scrapeResult = await scrapeFn();
+          slots = scrapeResult.slots;
+        } else {
+          throw new Error(`No scraper function found for: ${scrapeKey}`);
+        }
 
-        // 2. Parse provider-specific response
-        const provider = PROVIDERS[config.provider];
-        if (!provider) throw new Error(`Unknown provider: ${config.provider}`);
-
-        const slots: AppointmentSlot[] = provider.parseSlots(raw);
         slotsFound = slots.length;
 
-        // 3. Get last snapshot slots for diff
         const lastSnapshot = await this.repo.getLatestSnapshot(config.id);
         const previousSlots: AppointmentSlot[] = [];
         if (lastSnapshot?.rawPayload) {
@@ -65,7 +74,6 @@ export class ScraperService {
           }
         }
 
-        // 4. Save new snapshot (rawPayload stores slots JSON for next diff)
         const countryId = await this.getCountryId(config.countrySlug);
         await this.repo.saveSnapshot({
           configId: config.id,
@@ -76,7 +84,6 @@ export class ScraperService {
           rawPayload: JSON.stringify(slots),
         });
 
-        // 5. Notify subscribers only for genuinely new slots
         const newSlots = diffSlots(previousSlots, slots);
         if (newSlots.length > 0) {
           await sendAppointmentAlert({
@@ -109,6 +116,20 @@ export class ScraperService {
     }
 
     return results;
+  }
+
+  async scrapeNow(configId: string): Promise<ScrapeResult> {
+    const config = await this.repo.getConfig(configId);
+    if (!config) throw new Error(`Config not found: ${configId}`);
+
+    const scrapeKey = `${config.provider.toLowerCase()}-${config.countrySlug.toLowerCase()}`;
+    const scrapeFn = SCRAPE_FUNCTIONS[scrapeKey];
+
+    if (!scrapeFn) {
+      throw new Error(`No scraper function found for: ${scrapeKey}`);
+    }
+
+    return scrapeFn();
   }
 
   private countryIdCache = new Map<string, string>();
