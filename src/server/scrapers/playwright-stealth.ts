@@ -1,0 +1,317 @@
+import { chromium, type Browser, type Page } from "playwright";
+import type { AppointmentSlot, ScraperResult } from "./providers/base";
+
+const TLSCONTACT_EMAIL = process.env.TLSCONTACT_EMAIL ?? "";
+const TLSCONTACT_PASSWORD = process.env.TLSCONTACT_PASSWORD ?? "";
+const VFS_EMAIL = process.env.VFS_EMAIL ?? "";
+const VFS_PASSWORD = process.env.VFS_PASSWORD ?? "";
+const BLS_EMAIL = process.env.BLS_EMAIL ?? "";
+const BLS_PASSWORD = process.env.BLS_PASSWORD ?? "";
+
+let browser: Browser | null = null;
+
+async function getBrowser(): Promise<Browser> {
+  if (!browser || !browser.isConnected()) {
+    browser = await chromium.launch({
+      headless: true,
+      args: [
+        "--disable-blink-features=AutomationControlled",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--disable-gpu",
+        "--window-size=1920,1080",
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process",
+      ],
+    });
+  }
+  return browser;
+}
+
+async function createStealthPage(): Promise<Page> {
+  const browser = await getBrowser();
+  const context = await browser.newContext({
+    viewport: { width: 1920, height: 1080 },
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  });
+
+  const page = await context.newPage();
+
+  await page.addInitScript(() => {
+    const anyWindow = window as unknown as Record<string, unknown> & { chrome?: unknown };
+    Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+    Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
+    Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] });
+    anyWindow.chrome = { runtime: {} };
+  });
+
+  return page;
+}
+
+export interface ScrapeResult {
+  available: boolean;
+  slots: AppointmentSlot[];
+  html?: string;
+}
+
+export async function scrapeTLSContactFrance(): Promise<ScrapeResult> {
+  const page = await createStealthPage();
+  try {
+    const url = "https://fr.tlscontact.com/gb/LON/page.php?pid=appointment";
+    await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+
+    const title = await page.title();
+    if (title.includes("Robot") || title.includes("Access")) {
+      return { available: false, slots: [], html: "Blocked by anti-bot" };
+    }
+
+    const loginButton = await page.$('a[href*="login"], button:has-text("Login"), a:has-text("Sign in")');
+    if (loginButton) {
+      await loginButton.click();
+      await page.waitForTimeout(2000);
+
+      await page.fill('input[name="email"], input[type="email"]', TLSCONTACT_EMAIL);
+      await page.fill('input[name="password"], input[type="password"]', TLSCONTACT_PASSWORD);
+      await page.click('button[type="submit"], input[type="submit"]');
+      await page.waitForTimeout(5000);
+    }
+
+    const availableDates: AppointmentSlot[] = [];
+
+    const dateElements = await page.$$eval(
+      ".calendar-day, .date-picker, .appointment-date, [class*='calendar'], [class*='date'], td a:not([class*='disabled'])",
+      (els) => {
+        return els
+          .map((el) => el.textContent?.trim())
+          .filter((text) => text && text.match(/\d{1,4}[-\/\s]\d{1,2}[-\/\s]\d{1,4}/));
+      }
+    );
+
+    for (const dateText of dateElements) {
+      if (dateText) {
+        availableDates.push({ date: dateText, city: "London" });
+      }
+    }
+
+    const noSlots = await page.$('text=No slots available, text=No appointments, text=not available');
+    const hasSlots = availableDates.length > 0 && !noSlots;
+
+    return {
+      available: hasSlots,
+      slots: hasSlots ? availableDates : [],
+    };
+  } catch (error) {
+    console.error("TLScontact scrape error:", error);
+    return { available: false, slots: [] };
+  } finally {
+    await page.close();
+  }
+}
+
+export async function scrapeVFSItaly(): Promise<ScrapeResult> {
+  const page = await createStealthPage();
+  try {
+    const url = "https://visa.vfsglobal.com/gbr/en/ita/";
+    await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+
+    const loginButton = await page.$('a[href*="login"], button:has-text("Login"), a:has-text("Sign in")');
+    if (loginButton) {
+      await loginButton.click();
+      await page.waitForTimeout(2000);
+
+      await page.fill('input[name="email"], input[type="email"]', VFS_EMAIL);
+      await page.fill('input[name="password"], input[type="password"]', VFS_PASSWORD);
+      await page.click('button[type="submit"], input[type="submit"]');
+      await page.waitForTimeout(5000);
+    }
+
+    const availableDates: AppointmentSlot[] = [];
+
+    const dateElements = await page.$$eval(
+      ".calendar-day, .date-picker, .appointment-date, [class*='calendar'], [class*='date'], td a:not([class*='disabled'])",
+      (els) => {
+        return els
+          .map((el) => el.textContent?.trim())
+          .filter((text) => text && text.match(/\d{1,4}[-\/\s]\d{1,2}[-\/\s]\d{1,4}/));
+      }
+    );
+
+    for (const dateText of dateElements) {
+      if (dateText) {
+        availableDates.push({ date: dateText, city: "London" });
+      }
+    }
+
+    const noSlots = await page.$('text=No slots available, text=No appointments, text=not available');
+    const hasSlots = availableDates.length > 0 && !noSlots;
+
+    return {
+      available: hasSlots,
+      slots: hasSlots ? availableDates : [],
+    };
+  } catch (error) {
+    console.error("VFS Italy scrape error:", error);
+    return { available: false, slots: [] };
+  } finally {
+    await page.close();
+  }
+}
+
+export async function scrapeVFSSpain(): Promise<ScrapeResult> {
+  const page = await createStealthPage();
+  try {
+    const url = "https://visa.vfsglobal.com/gbr/en/esp/";
+    await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+
+    const loginButton = await page.$('a[href*="login"], button:has-text("Login"), a:has-text("Sign in")');
+    if (loginButton) {
+      await loginButton.click();
+      await page.waitForTimeout(2000);
+
+      await page.fill('input[name="email"], input[type="email"]', VFS_EMAIL);
+      await page.fill('input[name="password"], input[type="password"]', VFS_PASSWORD);
+      await page.click('button[type="submit"], input[type="submit"]');
+      await page.waitForTimeout(5000);
+    }
+
+    const availableDates: AppointmentSlot[] = [];
+
+    const dateElements = await page.$$eval(
+      ".calendar-day, .date-picker, .appointment-date, [class*='calendar'], [class*='date'], td a:not([class*='disabled'])",
+      (els) => {
+        return els
+          .map((el) => el.textContent?.trim())
+          .filter((text) => text && text.match(/\d{1,4}[-\/\s]\d{1,2}[-\/\s]\d{1,4}/));
+      }
+    );
+
+    for (const dateText of dateElements) {
+      if (dateText) {
+        availableDates.push({ date: dateText, city: "London" });
+      }
+    }
+
+    const noSlots = await page.$('text=No slots available, text=No appointments, text=not available');
+    const hasSlots = availableDates.length > 0 && !noSlots;
+
+    return {
+      available: hasSlots,
+      slots: hasSlots ? availableDates : [],
+    };
+  } catch (error) {
+    console.error("VFS Spain scrape error:", error);
+    return { available: false, slots: [] };
+  } finally {
+    await page.close();
+  }
+}
+
+export async function scrapeBLSSpain(): Promise<ScrapeResult> {
+  const page = await createStealthPage();
+  try {
+    const url = "https://blsspainvisa.com/uk/";
+    await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+
+    const loginButton = await page.$('a[href*="login"], button:has-text("Login"), a:has-text("Sign in")');
+    if (loginButton) {
+      await loginButton.click();
+      await page.waitForTimeout(2000);
+
+      await page.fill('input[name="email"], input[type="email"]', BLS_EMAIL);
+      await page.fill('input[name="password"], input[type="password"]', BLS_PASSWORD);
+      await page.click('button[type="submit"], input[type="submit"]');
+      await page.waitForTimeout(5000);
+    }
+
+    const availableDates: AppointmentSlot[] = [];
+
+    const dateElements = await page.$$eval(
+      ".calendar-day, .date-picker, .appointment-date, [class*='calendar'], [class*='date'], td a:not([class*='disabled'])",
+      (els) => {
+        return els
+          .map((el) => el.textContent?.trim())
+          .filter((text) => text && text.match(/\d{1,4}[-\/\s]\d{1,2}[-\/\s]\d{1,4}/));
+      }
+    );
+
+    for (const dateText of dateElements) {
+      if (dateText) {
+        availableDates.push({ date: dateText, city: "London" });
+      }
+    }
+
+    const noSlots = await page.$('text=No slots available, text=No appointments, text=not available');
+    const hasSlots = availableDates.length > 0 && !noSlots;
+
+    return {
+      available: hasSlots,
+      slots: hasSlots ? availableDates : [],
+    };
+  } catch (error) {
+    console.error("BLS Spain scrape error:", error);
+    return { available: false, slots: [] };
+  } finally {
+    await page.close();
+  }
+}
+
+export async function scrapeTLSContactGermany(): Promise<ScrapeResult> {
+  const page = await createStealthPage();
+  try {
+    const url = "https://de.tlscontact.com/gb/LON/page.php?pid=appointment";
+    await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+
+    const loginButton = await page.$('a[href*="login"], button:has-text("Login"), a:has-text("Sign in")');
+    if (loginButton) {
+      await loginButton.click();
+      await page.waitForTimeout(2000);
+
+      await page.fill('input[name="email"], input[type="email"]', TLSCONTACT_EMAIL);
+      await page.fill('input[name="password"], input[type="password"]', TLSCONTACT_PASSWORD);
+      await page.click('button[type="submit"], input[type="submit"]');
+      await page.waitForTimeout(5000);
+    }
+
+    const availableDates: AppointmentSlot[] = [];
+
+    const dateElements = await page.$$eval(
+      ".calendar-day, .date-picker, .appointment-date, [class*='calendar'], [class*='date'], td a:not([class*='disabled'])",
+      (els) => {
+        return els
+          .map((el) => el.textContent?.trim())
+          .filter((text) => text && text.match(/\d{1,4}[-\/\s]\d{1,2}[-\/\s]\d{1,4}/));
+      }
+    );
+
+    for (const dateText of dateElements) {
+      if (dateText) {
+        availableDates.push({ date: dateText, city: "London" });
+      }
+    }
+
+    const noSlots = await page.$('text=No slots available, text=No appointments, text=not available');
+    const hasSlots = availableDates.length > 0 && !noSlots;
+
+    return {
+      available: hasSlots,
+      slots: hasSlots ? availableDates : [],
+    };
+  } catch (error) {
+    console.error("TLScontact Germany scrape error:", error);
+    return { available: false, slots: [] };
+  } finally {
+    await page.close();
+  }
+}
+
+export async function closeBrowser(): Promise<void> {
+  if (browser) {
+    await browser.close();
+    browser = null;
+  }
+}
