@@ -7,6 +7,8 @@ const VFS_EMAIL = process.env.VFS_EMAIL ?? "";
 const VFS_PASSWORD = process.env.VFS_PASSWORD ?? "";
 const BLS_EMAIL = process.env.BLS_EMAIL ?? "";
 const BLS_PASSWORD = process.env.BLS_PASSWORD ?? "";
+const VFS_INDIA_EMAIL = process.env.VFS_INDIA_EMAIL ?? "";
+const VFS_INDIA_PASSWORD = process.env.VFS_INDIA_PASSWORD ?? "";
 
 let browser: Browser | null = null;
 
@@ -304,6 +306,94 @@ export async function scrapeTLSContactGermany(): Promise<ScrapeResult> {
   } catch (error) {
     console.error("TLScontact Germany scrape error:", error);
     return { available: false, slots: [] };
+  } finally {
+    await page.close();
+  }
+}
+
+export async function scrapeVFSIndiaSwitzerland(): Promise<ScrapeResult> {
+  const page = await createStealthPage();
+  try {
+    console.log("[VFS India CH] Starting scrape...");
+
+    const loginUrl = "https://visa.vfsglobal.com/ind/en/che/login";
+    await page.goto(loginUrl, { waitUntil: "networkidle", timeout: 60000 });
+
+    const title = await page.title();
+    console.log("[VFS India CH] Page title:", title);
+    if (title.includes("Robot") || title.includes("Access Denied")) {
+      return { available: false, slots: [], html: "Blocked by anti-bot" };
+    }
+
+    const currentUrl = page.url();
+    console.log("[VFS India CH] Current URL:", currentUrl);
+
+    const emailInput = await page.$('input[type="email"], input[name="email"], input[name="username"], input[id*="email"], input[type="text"]');
+    if (emailInput) {
+      await emailInput.fill(VFS_INDIA_EMAIL);
+      await page.waitForTimeout(500);
+    }
+
+    const passwordInput = await page.$('input[type="password"], input[name="password"], input[id*="password"]');
+    if (passwordInput) {
+      await passwordInput.fill(VFS_INDIA_PASSWORD);
+      await page.waitForTimeout(500);
+    }
+
+    const submitBtn = await page.$('button[type="submit"], input[type="submit"], button:has-text("Login"), button:has-text("Sign In"), a:has-text("Login")');
+    if (submitBtn) {
+      await submitBtn.click();
+      console.log("[VFS India CH] Clicked login...");
+      await page.waitForURL("**/dashboard**", { timeout: 30000 }).catch(() => {});
+      await page.waitForTimeout(5000);
+    }
+
+    console.log("[VFS India CH] URL after login:", page.url());
+
+    const newBookingLink = await page.$('a:has-text("Start New Booking"), a:has-text("New Booking"), button:has-text("Start New Booking"), [href*="booking"]:has-text("New")');
+    if (newBookingLink) {
+      await newBookingLink.click();
+      console.log("[VFS India CH] Clicked Start New Booking...");
+      await page.waitForTimeout(3000);
+    }
+
+    console.log("[VFS India CH] URL after booking click:", page.url());
+
+    const availableDates: AppointmentSlot[] = [];
+
+const dateElements = await page.$$eval(
+      '.calendar-day, .date-picker, .appointment-date, [class*="calendar"], [class*="date"], td a:not([class*="disabled"]), [class*="slot"]:not([class*="disabled"]), [data-date]',
+      (els) => {
+        return els
+          .map((el) => {
+            const dateAttr = el.getAttribute("data-date");
+            const dayText = el.textContent?.trim();
+            return dateAttr || dayText;
+          })
+          .filter((text) => text && text.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}/i));
+      }
+    );
+
+    console.log("[VFS India CH] Found date elements:", dateElements.length);
+
+    for (const dateText of dateElements) {
+      if (dateText && !availableDates.find((s) => s.date === dateText)) {
+        availableDates.push({ date: dateText, city: "India", category: "tourist" });
+      }
+    }
+
+    const noSlotsEl = await page.$('text=No slots available, text=No appointments, text=not available, text=Currently there are no appointments, text=Calendar is full');
+    const hasSlots = availableDates.length > 0 && !noSlotsEl;
+
+    console.log("[VFS India CH] Slots found:", availableDates.length, "hasSlots:", hasSlots);
+
+    return {
+      available: hasSlots,
+      slots: hasSlots ? availableDates : [],
+    };
+  } catch (error) {
+    console.error("[VFS India CH] Scrape error:", error);
+    return { available: false, slots: [], html: String(error) };
   } finally {
     await page.close();
   }

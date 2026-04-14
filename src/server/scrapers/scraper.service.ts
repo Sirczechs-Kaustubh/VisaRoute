@@ -5,6 +5,7 @@ import {
   scrapeVFSItaly,
   scrapeVFSSpain,
   scrapeBLSSpain,
+  scrapeVFSIndiaSwitzerland,
   type ScrapeResult,
 } from "./playwright-stealth";
 import { TLScontactProvider } from "./providers/tlscontact";
@@ -32,6 +33,7 @@ const SCRAPE_FUNCTIONS: Record<string, ScrapeFunction> = {
   "vfs-italy": scrapeVFSItaly,
   "vfs-spain": scrapeVFSSpain,
   "bls-spain": scrapeBLSSpain,
+  "vfs-india-switzerland": scrapeVFSIndiaSwitzerland,
 };
 
 export class ScraperService {
@@ -49,7 +51,9 @@ export class ScraperService {
       let errorMessage: string | undefined;
 
       try {
-        const scrapeKey = `${config.provider.toLowerCase()}-${config.countrySlug.toLowerCase()}`;
+        const scrapeKey = config.residenceCountry.toLowerCase() === "ind" && config.provider.toLowerCase() === "vfs_global"
+          ? `vfs-india-${config.countrySlug.toLowerCase()}`
+          : `${config.provider.toLowerCase()}-${config.countrySlug.toLowerCase()}`;
         const scrapeFn = SCRAPE_FUNCTIONS[scrapeKey];
 
         let slots: AppointmentSlot[] = [];
@@ -122,7 +126,9 @@ export class ScraperService {
     const config = await this.repo.getConfig(configId);
     if (!config) throw new Error(`Config not found: ${configId}`);
 
-    const scrapeKey = `${config.provider.toLowerCase()}-${config.countrySlug.toLowerCase()}`;
+    const scrapeKey = config.residenceCountry.toLowerCase() === "ind" && config.provider.toLowerCase() === "vfs_global"
+      ? `vfs-india-${config.countrySlug.toLowerCase()}`
+      : `${config.provider.toLowerCase()}-${config.countrySlug.toLowerCase()}`;
     const scrapeFn = SCRAPE_FUNCTIONS[scrapeKey];
 
     if (!scrapeFn) {
