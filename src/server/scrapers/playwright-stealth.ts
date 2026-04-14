@@ -317,7 +317,7 @@ export async function scrapeVFSIndiaSwitzerland(): Promise<ScrapeResult> {
     console.log("[VFS India CH] Starting scrape...");
 
     const loginUrl = "https://visa.vfsglobal.com/ind/en/che/login";
-    await page.goto(loginUrl, { waitUntil: "networkidle", timeout: 60000 });
+    await page.goto(loginUrl, { waitUntil: "domcontentloaded", timeout: 90000 });
 
     const title = await page.title();
     console.log("[VFS India CH] Page title:", title);
@@ -344,8 +344,7 @@ export async function scrapeVFSIndiaSwitzerland(): Promise<ScrapeResult> {
     if (submitBtn) {
       await submitBtn.click();
       console.log("[VFS India CH] Clicked login...");
-      await page.waitForURL("**/dashboard**", { timeout: 30000 }).catch(() => {});
-      await page.waitForTimeout(5000);
+      await page.waitForTimeout(8000);
     }
 
     console.log("[VFS India CH] URL after login:", page.url());
