@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ApplyingFrom } from "@/components/ApplyingFrom";
 import { DestinationSearch } from "@/components/DestinationSearch";
 import { CountriesService } from "@/server/countries/countries.service";
 
@@ -10,7 +11,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-sky-50/30">
       <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <Link
             href="/"
             className="flex items-center gap-2 text-xl font-bold tracking-tight text-primary-700"
@@ -22,7 +23,10 @@ export default async function HomePage() {
             </span>
             VisaRoute
           </Link>
-          <p className="hidden text-sm font-medium text-slate-500 sm:block">Schengen visa made simple</p>
+          <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-6">
+            <ApplyingFrom />
+            <p className="hidden text-sm font-medium text-slate-500 sm:block">Schengen visa made simple</p>
+          </div>
         </div>
       </header>
 
@@ -45,12 +49,16 @@ export default async function HomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </a>
-            <a
-              href="#appointment-checker"
-              className="inline-flex items-center rounded-xl border-2 border-slate-200 bg-white px-6 py-3.5 text-base font-semibold text-slate-700 transition hover:border-primary-200 hover:bg-primary-50/50 hover:text-primary-700"
+            <span
+              className="inline-flex cursor-not-allowed select-none items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-3.5 text-base font-semibold text-slate-500"
+              aria-label="Appointment alerts — coming soon"
+              title="Coming soon"
             >
-              Check appointment alerts
-            </a>
+              Appointment alerts
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
+                Coming soon
+              </span>
+            </span>
           </div>
         </section>
 
@@ -62,33 +70,16 @@ export default async function HomePage() {
           id="appointment-checker"
           className="mt-16 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_3px_0_rgb(0_0_0_/0.04),0_4px_12px_-2px_rgb(0_0_0_/0.06)] sm:p-8"
         >
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">Check appointment alerts</h2>
-          <p className="mt-2 text-slate-600">
-            Subscribe to get notified when new visa appointment slots open for your chosen country, or
-            check availability now.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-4">
-            <Link
-              href="/country/france#appointments"
-              className="inline-flex items-center rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
-            >
-              Check France appointments
-            </Link>
-            <Link
-              href="/country/germany#appointments"
-              className="inline-flex items-center rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Check Germany appointments
-            </Link>
-            <Link
-              href="/country/spain#appointments"
-              className="inline-flex items-center rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Check Spain appointments
-            </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">Appointment alerts</h2>
+            <span className="rounded-full bg-amber-100 px-3 py-0.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
+              Coming soon
+            </span>
           </div>
-          <p className="mt-4 text-sm text-slate-500">
-            Or choose a country above to see its appointment section.
+          <p className="mt-3 text-slate-600">
+            Slot alerts and live appointment availability are not available yet—we are not offering
+            appointment notifications at this time. We will enable this here when the feature is
+            ready.
           </p>
         </section>
 

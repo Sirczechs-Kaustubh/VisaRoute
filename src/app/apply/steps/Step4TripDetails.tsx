@@ -27,6 +27,41 @@ export function Step4TripDetails({
   onBack: () => void;
 }) {
   const [section, setSection] = useState<"travel" | "companions">("travel");
+  const [stepError, setStepError] = useState<string | null>(null);
+
+  const travelComplete =
+    Boolean(data.accommodation?.trim()) &&
+    Boolean(data.entryCity?.trim()) &&
+    Boolean(data.multiCountry?.trim());
+
+  const companionsChoice = data.travellingWithCompanions?.trim().toLowerCase();
+  const companionsAnswered = companionsChoice === "yes" || companionsChoice === "no";
+
+  function tryContinue() {
+    setStepError(null);
+
+    if (!travelComplete) {
+      setStepError(
+        "Finish the Travel Plan tab: where you’ll stay, your first Schengen entry city, and whether you’ll visit other Schengen countries.",
+      );
+      setSection("travel");
+      return;
+    }
+
+    if (!companionsAnswered) {
+      setStepError("On the Companions tab, choose Yes or No for travelling with others.");
+      setSection("companions");
+      return;
+    }
+
+    if (companionsChoice === "yes" && (!data.companionsCount || data.companionsCount < 1)) {
+      setStepError("Select how many companions are travelling with you.");
+      setSection("companions");
+      return;
+    }
+
+    onNext();
+  }
 
   return (
     <>
@@ -46,21 +81,49 @@ export function Step4TripDetails({
       <div className="mt-6 flex gap-1 rounded-lg bg-slate-100 p-1">
         <button
           type="button"
-          onClick={() => setSection("travel")}
+          onClick={() => {
+            setSection("travel");
+            setStepError(null);
+          }}
           className={`flex-1 rounded-md px-3 py-2.5 text-sm font-medium transition ${
             section === "travel" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
           }`}
         >
-          Travel Plan
+          <span className="flex items-center justify-center gap-2">
+            Travel Plan
+            {travelComplete ? (
+              <span className="text-emerald-600" aria-hidden>
+                ✓
+              </span>
+            ) : (
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
+                To do
+              </span>
+            )}
+          </span>
         </button>
         <button
           type="button"
-          onClick={() => setSection("companions")}
+          onClick={() => {
+            setSection("companions");
+            setStepError(null);
+          }}
           className={`flex-1 rounded-md px-3 py-2.5 text-sm font-medium transition ${
             section === "companions" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
           }`}
         >
-          Companions
+          <span className="flex items-center justify-center gap-2">
+            Companions
+            {companionsAnswered ? (
+              <span className="text-emerald-600" aria-hidden>
+                ✓
+              </span>
+            ) : (
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
+                To do
+              </span>
+            )}
+          </span>
         </button>
       </div>
 
@@ -143,7 +206,7 @@ export function Step4TripDetails({
                 type="button"
                 onClick={() => updateData({ travellingWithCompanions: "yes", companionsCount: data.companionsCount || 1 })}
                 className={`flex items-center gap-2 rounded-xl border-2 px-6 py-4 transition ${
-                  data.travellingWithCompanions === "yes" ? "border-emerald-500 bg-emerald-50" : "border-slate-200 bg-white hover:border-slate-300"
+                  companionsChoice === "yes" ? "border-emerald-500 bg-emerald-50" : "border-slate-200 bg-white hover:border-slate-300"
                 }`}
               >
                 <span className="text-xl">✓</span>
@@ -153,7 +216,7 @@ export function Step4TripDetails({
                 type="button"
                 onClick={() => updateData({ travellingWithCompanions: "no", companionsCount: 0 })}
                 className={`flex items-center gap-2 rounded-xl border-2 px-6 py-4 transition ${
-                  data.travellingWithCompanions === "no" ? "border-emerald-500 bg-emerald-50" : "border-slate-200 bg-white hover:border-slate-300"
+                  companionsChoice === "no" ? "border-emerald-500 bg-emerald-50" : "border-slate-200 bg-white hover:border-slate-300"
                 }`}
               >
                 <span className="text-xl">✗</span>
@@ -161,7 +224,7 @@ export function Step4TripDetails({
               </button>
             </div>
 
-            {data.travellingWithCompanions === "yes" && (
+            {companionsChoice === "yes" && (
               <div className="mt-6">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">Number of companions</label>
                 <select
@@ -179,7 +242,25 @@ export function Step4TripDetails({
         </div>
       )}
 
-      <StepFooter step={4} total={11} onBack={onBack} onNext={onNext} />
+      {stepError && (
+        <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+          {stepError}
+        </div>
+      )}
+
+      {!travelComplete || !companionsAnswered ? (
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+          <p className="font-medium text-slate-800">Checklist before Continue</p>
+          <ul className="mt-2 list-inside list-disc space-y-1">
+            {!travelComplete && <li>Open Travel Plan and complete stay type, entry city, and other countries.</li>}
+            {!companionsAnswered && <li>Open Companions and choose Yes or No (traveling solo is fine — pick No).</li>}
+          </ul>
+        </div>
+      ) : (
+        <p className="mt-4 text-xs font-medium text-emerald-700">Travel plan and companions are complete — you can continue.</p>
+      )}
+
+      <StepFooter step={4} total={11} onBack={onBack} onNext={tryContinue} />
     </>
   );
 }

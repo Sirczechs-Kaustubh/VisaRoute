@@ -1,15 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ApplicationData, UploadedDocument } from "../ApplyFlow";
 import { StepFooter, TipBox } from "../StepFooter";
 
-const RESIDENCE_DOC_TYPES = [
-  { value: "brp", label: "Biometric Residence Permit (BRP)", desc: "Physical card issued by the Home Office" },
+const RESIDENCE_DOC_TYPES_ALL = [
+  { value: "brp", label: "Biometric Residence Permit (BRP)", desc: "Physical card issued by the UK Home Office" },
   { value: "visa_vignette", label: "Visa Vignette", desc: "Visa sticker in your passport" },
   { value: "evisa", label: "eVisa", desc: "Digital immigration status" },
-  { value: "residence_permit", label: "Other Residence Permit", desc: "Non-UK residence document" },
-];
+  { value: "residence_permit", label: "Residence permit / proof of legal stay", desc: "Official document for your current country of residence" },
+] as const;
+
+const NON_UK_RESIDENCE_TYPES = RESIDENCE_DOC_TYPES_ALL.filter((t) => t.value !== "brp");
 
 function SharecodeVerifier({ draftToken }: { draftToken: string | null }) {
   const [shareCode, setShareCode] = useState("");
@@ -111,13 +113,33 @@ export function Step3Residence({
   draftToken?: string | null;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [selectedDocType, setSelectedDocType] = useState("brp");
+  const [selectedDocType, setSelectedDocType] = useState("residence_permit");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showOptionalUpload, setShowOptionalUpload] = useState(false);
 
-  const residenceDocTypes = RESIDENCE_DOC_TYPES.map((t) => t.value);
+  const isUkResident = data.countryOfResidence === "gb";
+  const docTypesForUser = useMemo(
+    () => (isUkResident ? [...RESIDENCE_DOC_TYPES_ALL] : [...NON_UK_RESIDENCE_TYPES]),
+    [isUkResident],
+  );
+  const residenceDocTypes = docTypesForUser.map((t) => t.value);
   const uploadedResidenceDocs = data.uploadedDocuments.filter((d) => residenceDocTypes.includes(d.documentType));
-  const isUK = data.applyingFromCountry === "gb" || data.countryOfResidence === "gb";
+  const showShareCode = isUkResident && data.applyingFromCountry === "gb";
+
+  useEffect(() => {
+    if (!docTypesForUser.some((t) => t.value === selectedDocType)) {
+      setSelectedDocType(docTypesForUser[0]?.value ?? "residence_permit");
+    }
+  }, [docTypesForUser, selectedDocType]);
+
+  useEffect(() => {
+    if (isUkResident) setShowOptionalUpload(true);
+  }, [isUkResident]);
+
+  useEffect(() => {
+    if (!isUkResident && uploadedResidenceDocs.length > 0) setShowOptionalUpload(true);
+  }, [isUkResident, uploadedResidenceDocs.length]);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -147,7 +169,9 @@ export function Step3Residence({
   return (
     <>
       <TipBox icon="🏠">
-        Your residence permit must not expire before your planned travel date.
+        {isUkResident
+          ? "Your residence permit must not expire before your planned travel date."
+          : "A UK Biometric Residence Permit only applies if you legally reside in the UK. Your country of residence is used to tailor this step."}
       </TipBox>
 
       <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 3 of 11</p>
@@ -155,73 +179,101 @@ export function Step3Residence({
         Confirm your residence status.
       </h1>
       <p className="mt-2 text-slate-600">
-        {isUK
-          ? "As a UK-based applicant, we need to verify your residence permit eligibility."
-          : "We need to verify your current residence status."}
+        {isUkResident
+          ? "As a UK resident, upload your immigration document (e.g. BRP or digital status) so we can verify eligibility."
+          : "You are not indicated as living in the UK, so a UK BRP is not required. Continue to the next step, or optionally add proof of legal stay in your country if you use one."}
       </p>
 
-      {isUK && (
+      {showShareCode && (
         <div className="mt-6">
           <SharecodeVerifier draftToken={draftToken ?? null} />
         </div>
       )}
 
       <div className="mt-6">
-        <div className="rounded-xl border border-primary-200 bg-primary-50/50 p-4">
-          <p className="text-sm text-slate-700">
-            Upload your residence document so we can verify your eligibility and extract key details automatically.
-          </p>
-        </div>
+        {isUkResident ? (
+          <div className="rounded-xl border border-primary-200 bg-primary-50/50 p-4">
+            <p className="text-sm text-slate-700">
+              Upload your residence document so we can verify your eligibility and extract key details automatically.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm text-slate-700">
+              <strong className="font-medium text-slate-900">No UK BRP required.</strong> Tap Continue to go on, or add an optional document if your situation needs it.
+            </p>
+          </div>
+        )}
 
-        <div className="mt-4">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">Document type</label>
-          <select
-            value={selectedDocType}
-            onChange={(e) => setSelectedDocType(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          >
-            {RESIDENCE_DOC_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-          <p className="mt-1 text-sm text-slate-500">
-            {RESIDENCE_DOC_TYPES.find((t) => t.value === selectedDocType)?.desc}
-          </p>
-        </div>
-
-        <div className="mt-4">
-          <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={handleChange} className="hidden" />
+        {!isUkResident && !showOptionalUpload && uploadedResidenceDocs.length === 0 && (
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
-            disabled={isUploading}
-            className={`flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 transition ${
-              isUploading ? "cursor-wait opacity-60 border-slate-300" : "border-slate-300 bg-white hover:border-primary-300 hover:bg-primary-50/30"
-            }`}
+            onClick={() => setShowOptionalUpload(true)}
+            className="mt-4 w-full rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 transition hover:border-primary-400 hover:bg-primary-50/40"
           >
-            {isUploading ? (
-              <>
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
-                <p className="mt-3 text-sm font-semibold text-slate-700">Uploading...</p>
-              </>
-            ) : (
-              <>
-                <svg className="h-8 w-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p className="mt-2 text-sm font-semibold text-slate-700">Upload your {RESIDENCE_DOC_TYPES.find((t) => t.value === selectedDocType)?.label}</p>
-                <p className="mt-0.5 text-xs text-slate-500">JPG, PNG or PDF</p>
-              </>
-            )}
+            Add proof of legal stay (optional)
           </button>
-          {uploadError && <p className="mt-2 text-sm text-red-600">{uploadError}</p>}
-        </div>
+        )}
+
+        {(isUkResident || showOptionalUpload) && (
+          <>
+            <div className="mt-4">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">Document type</label>
+              <select
+                value={selectedDocType}
+                onChange={(e) => setSelectedDocType(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+              >
+                {docTypesForUser.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-sm text-slate-500">
+                {docTypesForUser.find((t) => t.value === selectedDocType)?.desc}
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={handleChange} className="hidden" />
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                disabled={isUploading}
+                className={`flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 transition ${
+                  isUploading ? "cursor-wait opacity-60 border-slate-300" : "border-slate-300 bg-white hover:border-primary-300 hover:bg-primary-50/30"
+                }`}
+              >
+                {isUploading ? (
+                  <>
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
+                    <p className="mt-3 text-sm font-semibold text-slate-700">Uploading...</p>
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-8 w-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p className="mt-2 text-sm font-semibold text-slate-700">
+                      {isUkResident ? "Upload document" : "Optional upload"} —{" "}
+                      {docTypesForUser.find((t) => t.value === selectedDocType)?.label}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">JPG, PNG or PDF</p>
+                  </>
+                )}
+              </button>
+              {uploadError && <p className="mt-2 text-sm text-red-600">{uploadError}</p>}
+            </div>
+          </>
+        )}
 
         {uploadedResidenceDocs.length > 0 && (
           <div className="mt-4 space-y-2">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600">Uploaded documents</h3>
             {uploadedResidenceDocs.map((doc) => {
-              const typeLabel = RESIDENCE_DOC_TYPES.find((t) => t.value === doc.documentType)?.label ?? doc.documentType;
+              const typeLabel =
+                RESIDENCE_DOC_TYPES_ALL.find((t) => t.value === doc.documentType)?.label ?? doc.documentType;
               return (
                 <div key={doc.id} className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
                   <div className="flex items-center gap-2">
