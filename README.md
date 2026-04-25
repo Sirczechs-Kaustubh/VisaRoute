@@ -1,6 +1,6 @@
 # VisaRoute.
 
-## Project Status - fix for deployment
+## Project Status - fix 
 
 VisaRoute started as a frontend-only Next.js 14 prototype for Schengen visa discovery and application guidance.
 
