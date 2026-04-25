@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ApplicationDraft } from "@/lib/contracts";
@@ -202,47 +202,52 @@ function hydrateFromDraft(draft: ApplicationDraft): ApplicationData {
   };
 }
 
+function emptyToNull(value: string | undefined) {
+  const t = value?.trim();
+  return t ? t : null;
+}
+
 function buildDraftPayload(data: ApplicationData, step: number) {
   return {
     currentStep: step,
-    applyingFromCountry: data.applyingFromCountry || null,
+    applyingFromCountry: emptyToNull(data.applyingFromCountry),
     applicantProfile: {
-      firstName: data.firstName || null,
-      lastName: data.lastName || null,
-      email: data.email || null,
-      phoneNumber: data.phoneNumber || null,
-      countryOfResidence: data.countryOfResidence || null,
-      purposeOfTravel: data.purposeOfTravel || null,
-      travelStartDate: data.travelStartDate || null,
-      travelEndDate: data.travelEndDate || null,
+      firstName: emptyToNull(data.firstName),
+      lastName: emptyToNull(data.lastName),
+      email: emptyToNull(data.email),
+      phoneNumber: emptyToNull(data.phoneNumber),
+      countryOfResidence: emptyToNull(data.countryOfResidence),
+      purposeOfTravel: emptyToNull(data.purposeOfTravel),
+      travelStartDate: data.travelStartDate?.trim() || null,
+      travelEndDate: data.travelEndDate?.trim() || null,
     },
     travelPlan: {
-      accommodationType: data.accommodation || null,
-      entryCity: data.entryCity || null,
-      multiCountryMode: data.multiCountry || null,
+      accommodationType: emptyToNull(data.accommodation),
+      entryCity: emptyToNull(data.entryCity),
+      multiCountryMode: emptyToNull(data.multiCountry),
     },
     companionGroup: {
-      travellingWithCompanions: data.travellingWithCompanions || null,
+      travellingWithCompanions: emptyToNull(data.travellingWithCompanions),
       companionsCount:
         data.travellingWithCompanions === "yes" ? data.companionsCount || 0 : data.companionsCount,
     },
     employmentProfile: {
-      employmentStatus: data.employmentStatus || null,
+      employmentStatus: emptyToNull(data.employmentStatus),
     },
     visaHistoryEntries:
       data.visitedSchengenBefore === "yes"
         ? data.previousTravelVisits.map((visit) => ({
-            countryName: visit.country || null,
-            yearLabel: visit.year || null,
+            countryName: emptyToNull(visit.country),
+            yearLabel: emptyToNull(visit.year),
           }))
         : [],
     refusalHistoryEntries:
       data.previousVisaRejections === "yes"
         ? data.refusalDetails.map((entry) => ({
-            countryName: entry.country || null,
-            yearLabel: entry.year || null,
-            visaTypeLabel: entry.visaType || null,
-            reason: entry.reason || null,
+            countryName: emptyToNull(entry.country),
+            yearLabel: emptyToNull(entry.year),
+            visaTypeLabel: emptyToNull(entry.visaType),
+            reason: emptyToNull(entry.reason),
           }))
         : [],
   };
@@ -266,6 +271,8 @@ export function ApplyFlow({
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isLoading, startLoading] = useTransition();
   const [isSaving, startSaving] = useTransition();
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
   useEffect(() => {
     if (initialDraft) {
@@ -366,7 +373,7 @@ export function ApplyFlow({
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(buildDraftPayload(data, nextStep)),
+      body: JSON.stringify(buildDraftPayload(dataRef.current, nextStep)),
     });
 
     const payload = (await response.json()) as {
@@ -378,7 +385,7 @@ export function ApplyFlow({
       throw new Error(payload.error?.message ?? "Could not save your progress");
     }
 
-    // Use nextStep directly — migrateStepNumber is only for loading old drafts
+    // Use nextStep from navigation (incl. Step 3 skip); migrateStepNumber is only for loading old drafts.
     setStep(nextStep);
     setSaveMessage("Progress saved");
   }
@@ -525,6 +532,14 @@ export function ApplyFlow({
 
         <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-10">
           <div className="mx-auto max-w-2xl">
+            {saveMessage && !saveMessage.includes("saved") && (
+              <div
+                className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+                role="alert"
+              >
+                {saveMessage}
+              </div>
+            )}
             {/* Progress header */}
             <div className="mb-6 hidden flex-col gap-2 lg:flex">
               <div className="flex items-center justify-between">

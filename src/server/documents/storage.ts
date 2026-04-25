@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync, unlinkSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import crypto from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
 
 export interface StorageAdapter {
   upload(key: string, buffer: Buffer, mimeType: string): Promise<string>;
@@ -50,45 +49,76 @@ export class LocalStorageAdapter implements StorageAdapter {
 }
 
 // ---------------------------------------------------------------------------
-// Supabase Storage adapter (production)
+// Supabase Storage (production) — Storage REST only, no @supabase/supabase-js
 // ---------------------------------------------------------------------------
 
 const SUPABASE_BUCKET = "documents";
 
-export class SupabaseStorageAdapter implements StorageAdapter {
-  private client;
+function encodeStorageObjectPath(objectKey: string): string {
+  return objectKey.split("/").map((segment) => encodeURIComponent(segment)).join("/");
+}
 
-  constructor() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_KEY;
-    if (!url || !key) {
+/** Uses Supabase Storage HTTP API so the app bundle does not depend on @supabase/supabase-js. */
+export class SupabaseStorageAdapter implements StorageAdapter {
+  private readonly projectUrl: string;
+  private readonly serviceRoleKey: string;
+
+  constructor(projectUrl: string, serviceRoleKey: string) {
+    if (!projectUrl?.trim() || !serviceRoleKey?.trim()) {
       throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_KEY must be set");
     }
-    this.client = createClient(url, key);
+    this.projectUrl = projectUrl.replace(/\/$/, "");
+    this.serviceRoleKey = serviceRoleKey;
+  }
+
+  private authHeaders(contentType?: string): Record<string, string> {
+    const h: Record<string, string> = {
+      Authorization: `Bearer ${this.serviceRoleKey}`,
+      apikey: this.serviceRoleKey,
+    };
+    if (contentType) h["Content-Type"] = contentType;
+    return h;
   }
 
   async upload(key: string, buffer: Buffer, mimeType: string): Promise<string> {
-    const { error } = await this.client.storage
-      .from(SUPABASE_BUCKET)
-      .upload(key, buffer, { contentType: mimeType, upsert: true });
-    if (error) throw new Error(`Supabase upload failed: ${error.message}`);
+    const path = encodeStorageObjectPath(key);
+    const url = `${this.projectUrl}/storage/v1/object/${SUPABASE_BUCKET}/${path}?upsert=true`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: this.authHeaders(mimeType),
+      body: new Uint8Array(buffer),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Supabase upload failed: ${res.status} ${detail}`);
+    }
     return key;
   }
 
   getUrl(key: string): string {
-    const { data } = this.client.storage.from(SUPABASE_BUCKET).getPublicUrl(key);
-    return data.publicUrl;
+    const path = encodeStorageObjectPath(key);
+    return `${this.projectUrl}/storage/v1/object/public/${SUPABASE_BUCKET}/${path}`;
   }
 
   async delete(key: string): Promise<void> {
-    const { error } = await this.client.storage.from(SUPABASE_BUCKET).remove([key]);
-    if (error) throw new Error(`Supabase delete failed: ${error.message}`);
+    const path = encodeStorageObjectPath(key);
+    const url = `${this.projectUrl}/storage/v1/object/${SUPABASE_BUCKET}/${path}`;
+    const res = await fetch(url, { method: "DELETE", headers: this.authHeaders() });
+    if (!res.ok && res.status !== 404) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Supabase delete failed: ${res.status} ${detail}`);
+    }
   }
 
   async read(key: string): Promise<Buffer> {
-    const { data, error } = await this.client.storage.from(SUPABASE_BUCKET).download(key);
-    if (error) throw new Error(`Supabase read failed: ${error.message}`);
-    return Buffer.from(await data.arrayBuffer());
+    const path = encodeStorageObjectPath(key);
+    const url = `${this.projectUrl}/storage/v1/object/${SUPABASE_BUCKET}/${path}`;
+    const res = await fetch(url, { headers: this.authHeaders() });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Supabase read failed: ${res.status} ${detail}`);
+    }
+    return Buffer.from(await res.arrayBuffer());
   }
 }
 
@@ -112,7 +142,12 @@ export function getStorage(): StorageAdapter {
   if (!storageInstance) {
     const useSupabase =
       !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SERVICE_KEY;
-    storageInstance = useSupabase ? new SupabaseStorageAdapter() : new LocalStorageAdapter();
+    storageInstance = useSupabase
+      ? new SupabaseStorageAdapter(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_KEY!,
+        )
+      : new LocalStorageAdapter();
   }
   return storageInstance;
 }
