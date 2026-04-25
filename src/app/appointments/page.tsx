@@ -2,6 +2,27 @@ import { db } from "@/db/client";
 import { ScraperConfig, ScraperRunStatus, AppointmentAvailabilitySnapshot } from "@prisma/client";
 import Link from "next/link";
 
+const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV === "production";
+
+function DisabledPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 via-white to-sky-50/30">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-slate-900">Appointments Tracker Unavailable</h1>
+        <p className="mt-2 text-slate-600">
+          The appointments tracker is not available on Vercel deployments.
+        </p>
+        <p className="mt-4 text-sm text-slate-500">
+          This feature requires a separate server or self-hosted deployment.
+        </p>
+        <Link href="/" className="mt-6 inline-block text-primary-600 hover:underline">
+          Return Home
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 interface SnapshotWithConfig extends AppointmentAvailabilitySnapshot {
   scraperConfig?: ScraperConfig | null;
 }
@@ -26,6 +47,10 @@ async function getActiveRoutes(): Promise<ScraperConfig[]> {
 }
 
 export default async function AppointmentsPage() {
+  if (isVercel) {
+    return <DisabledPage />;
+  }
+
   const [snapshots, routes] = await Promise.all([getAvailabilityData(), getActiveRoutes()]);
 
   const routesWithLatestSnapshot = routes.map((route) => {
