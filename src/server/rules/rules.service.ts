@@ -7,6 +7,15 @@ const NATIONALITY_CATEGORY_MAP = {
   all: "ALL",
 } as const;
 
+/** Visa types shown per destination group (Schengen keeps the short list only). */
+const VISA_TYPE_CODES_BY_COUNTRY_GROUP: Record<string, string[]> = {
+  schengen: ["schengen-tourism", "schengen-business", "schengen-family-friends"],
+  uk: ["uk-visitor"],
+  us: ["us-b1b2"],
+  canada: ["canada-visitor"],
+  australia: ["australia-visitor"],
+};
+
 export class RulesService {
   constructor(private readonly repository = new RulesRepository()) {}
 
@@ -14,6 +23,22 @@ export class RulesService {
     const visaTypes = await this.repository.findVisaTypes();
 
     return visaTypes.map((visaType) => ({
+      id: visaType.id,
+      code: visaType.code,
+      label: visaType.label,
+      category: visaType.category,
+    }));
+  }
+
+  async listVisaTypesForCountryGroup(countryGroupCode: string) {
+    const all = await this.repository.findVisaTypes();
+    const allow = VISA_TYPE_CODES_BY_COUNTRY_GROUP[countryGroupCode];
+    const filtered =
+      allow?.length > 0
+        ? [...all].filter((v) => allow.includes(v.code)).sort((a, b) => allow.indexOf(a.code) - allow.indexOf(b.code))
+        : all;
+
+    return filtered.map((visaType) => ({
       id: visaType.id,
       code: visaType.code,
       label: visaType.label,

@@ -2,20 +2,9 @@
 
 import type { ApplicationData } from "../ApplyFlow";
 import { StepFooter, TipBox } from "../StepFooter";
+import { SCHENGEN_APPLYING_FROM_OPTIONS } from "@/lib/applying-from-options";
 
-const APPLYING_FROM = [
-  { value: "", label: "Select country..." },
-  { value: "gb", label: "United Kingdom" },
-  { value: "in", label: "India" },
-  { value: "us", label: "United States" },
-  { value: "ae", label: "UAE" },
-  { value: "ng", label: "Nigeria" },
-  { value: "pk", label: "Pakistan" },
-  { value: "bd", label: "Bangladesh" },
-  { value: "ph", label: "Philippines" },
-  { value: "za", label: "South Africa" },
-  { value: "other", label: "Other" },
-];
+const APPLYING_FROM = [{ value: "", label: "Select country..." }, ...SCHENGEN_APPLYING_FROM_OPTIONS];
 
 const RESIDENCES = [
   { value: "", label: "Select country..." },

@@ -23,12 +23,11 @@ export default async function CountryPage({ params }: PageProps) {
   let initialRequirements: DocumentRequirementResponse | null = null;
 
   try {
-    [country, visaTypes] = await Promise.all([
-      countriesService.getCountryBySlug(slug),
-      rulesService.listVisaTypes(),
-    ]);
+    country = await countriesService.getCountryBySlug(slug);
+    visaTypes = await rulesService.listVisaTypesForCountryGroup(country.countryGroupCode);
+    const defaultVisaCode = visaTypes[0]?.code ?? "schengen-tourism";
     initialRequirements = await rulesService.getDocumentRequirements(slug, {
-      visaTypeCode: "short-stay-tourism",
+      visaTypeCode: defaultVisaCode,
       nationalityCategory: "visa-required",
     });
   } catch {

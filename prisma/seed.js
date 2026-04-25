@@ -43,52 +43,52 @@ const countryGroups = [
 
 // ─── Schengen Countries ──────────────────────────────────
 const schengenCountries = [
-  ["austria", "Austria", "AT", "WESTERN_EUROPE", 80, 99, 15, 45, 4],
-  ["belgium", "Belgium", "BE", "WESTERN_EUROPE", 80, 99, 15, 45, 4],
-  ["france", "France", "FR", "WESTERN_EUROPE", 80, 99, 15, 45, 6],
-  ["germany", "Germany", "DE", "WESTERN_EUROPE", 80, 99, 15, 45, 5],
-  ["luxembourg", "Luxembourg", "LU", "WESTERN_EUROPE", 80, 99, 15, 45, 3],
-  ["netherlands", "Netherlands", "NL", "WESTERN_EUROPE", 80, 99, 15, 45, 5],
-  ["switzerland", "Switzerland", "CH", "WESTERN_EUROPE", 80, 99, 15, 45, 4],
-  ["denmark", "Denmark", "DK", "NORDIC", 80, 99, 15, 45, 4],
-  ["finland", "Finland", "FI", "NORDIC", 80, 99, 15, 45, 4],
-  ["iceland", "Iceland", "IS", "NORDIC", 80, 99, 15, 45, 4],
-  ["norway", "Norway", "NO", "NORDIC", 80, 99, 15, 45, 4],
-  ["sweden", "Sweden", "SE", "NORDIC", 80, 99, 15, 45, 4],
-  ["czech-republic", "Czech Republic", "CZ", "CENTRAL_EASTERN_EUROPE", 80, 99, 15, 45, 3],
-  ["estonia", "Estonia", "EE", "CENTRAL_EASTERN_EUROPE", 80, 99, 15, 45, 3],
-  ["hungary", "Hungary", "HU", "CENTRAL_EASTERN_EUROPE", 80, 99, 15, 45, 3],
-  ["latvia", "Latvia", "LV", "CENTRAL_EASTERN_EUROPE", 80, 99, 15, 45, 3],
-  ["lithuania", "Lithuania", "LT", "CENTRAL_EASTERN_EUROPE", 80, 99, 15, 45, 3],
-  ["poland", "Poland", "PL", "CENTRAL_EASTERN_EUROPE", 80, 99, 15, 45, 4],
-  ["slovakia", "Slovakia", "SK", "CENTRAL_EASTERN_EUROPE", 80, 99, 15, 45, 3],
-  ["slovenia", "Slovenia", "SI", "CENTRAL_EASTERN_EUROPE", 80, 99, 15, 45, 3],
-  ["croatia", "Croatia", "HR", "SOUTHERN_EUROPE", 80, 99, 15, 45, 4],
-  ["greece", "Greece", "GR", "SOUTHERN_EUROPE", 80, 99, 15, 45, 4],
-  ["italy", "Italy", "IT", "SOUTHERN_EUROPE", 80, 99, 15, 45, 6],
-  ["malta", "Malta", "MT", "SOUTHERN_EUROPE", 80, 99, 15, 45, 3],
-  ["portugal", "Portugal", "PT", "SOUTHERN_EUROPE", 80, 99, 15, 45, 4],
-  ["spain", "Spain", "ES", "SOUTHERN_EUROPE", 80, 99, 15, 45, 6],
-  ["bulgaria", "Bulgaria", "BG", "CENTRAL_EASTERN_EUROPE", 80, 99, 15, 45, 3],
-  ["romania", "Romania", "RO", "CENTRAL_EASTERN_EUROPE", 80, 99, 15, 45, 3],
-  ["liechtenstein", "Liechtenstein", "LI", "WESTERN_EUROPE", 80, 99, 15, 45, 4],
+  ["austria", "Austria", "AT", "WESTERN_EUROPE", 90, 99, 15, 45, 4],
+  ["belgium", "Belgium", "BE", "WESTERN_EUROPE", 90, 99, 15, 45, 4],
+  ["france", "France", "FR", "WESTERN_EUROPE", 90, 99, 15, 45, 6],
+  ["germany", "Germany", "DE", "WESTERN_EUROPE", 90, 99, 15, 45, 5],
+  ["luxembourg", "Luxembourg", "LU", "WESTERN_EUROPE", 90, 99, 15, 45, 3],
+  ["netherlands", "Netherlands", "NL", "WESTERN_EUROPE", 90, 99, 15, 45, 5],
+  ["switzerland", "Switzerland", "CH", "WESTERN_EUROPE", 90, 99, 15, 45, 4],
+  ["denmark", "Denmark", "DK", "NORDIC", 90, 99, 15, 45, 4],
+  ["finland", "Finland", "FI", "NORDIC", 90, 99, 15, 45, 4],
+  ["iceland", "Iceland", "IS", "NORDIC", 90, 99, 15, 45, 4],
+  ["norway", "Norway", "NO", "NORDIC", 90, 99, 15, 45, 4],
+  ["sweden", "Sweden", "SE", "NORDIC", 90, 99, 15, 45, 4],
+  ["czech-republic", "Czech Republic", "CZ", "CENTRAL_EASTERN_EUROPE", 90, 99, 15, 45, 3],
+  ["estonia", "Estonia", "EE", "CENTRAL_EASTERN_EUROPE", 90, 99, 15, 45, 3],
+  ["hungary", "Hungary", "HU", "CENTRAL_EASTERN_EUROPE", 90, 99, 15, 45, 3],
+  ["latvia", "Latvia", "LV", "CENTRAL_EASTERN_EUROPE", 90, 99, 15, 45, 3],
+  ["lithuania", "Lithuania", "LT", "CENTRAL_EASTERN_EUROPE", 90, 99, 15, 45, 3],
+  ["poland", "Poland", "PL", "CENTRAL_EASTERN_EUROPE", 90, 99, 15, 45, 4],
+  ["slovakia", "Slovakia", "SK", "CENTRAL_EASTERN_EUROPE", 90, 99, 15, 45, 3],
+  ["slovenia", "Slovenia", "SI", "CENTRAL_EASTERN_EUROPE", 90, 99, 15, 45, 3],
+  ["croatia", "Croatia", "HR", "SOUTHERN_EUROPE", 90, 99, 15, 45, 4],
+  ["greece", "Greece", "GR", "SOUTHERN_EUROPE", 90, 99, 15, 45, 4],
+  ["italy", "Italy", "IT", "SOUTHERN_EUROPE", 90, 99, 15, 45, 6],
+  ["malta", "Malta", "MT", "SOUTHERN_EUROPE", 90, 99, 15, 45, 3],
+  ["portugal", "Portugal", "PT", "SOUTHERN_EUROPE", 90, 99, 15, 45, 4],
+  ["spain", "Spain", "ES", "SOUTHERN_EUROPE", 90, 99, 15, 45, 6],
+  ["bulgaria", "Bulgaria", "BG", "CENTRAL_EASTERN_EUROPE", 90, 99, 15, 45, 3],
+  ["romania", "Romania", "RO", "CENTRAL_EASTERN_EUROPE", 90, 99, 15, 45, 3],
+  ["liechtenstein", "Liechtenstein", "LI", "WESTERN_EUROPE", 90, 99, 15, 45, 4],
 ];
 
-// ─── Non-Schengen Countries ─────────────────────────────
+// ─── Non-Schengen Countries (visa fee normalised to EUR 90 in product UI) ──
 const ukCountries = [
-  ["united-kingdom", "United Kingdom", "GB", "BRITISH_ISLES", 100, 120, 15, 60, 6],
+  ["united-kingdom", "United Kingdom", "GB", "BRITISH_ISLES", 90, 120, 15, 60, 6],
 ];
 
 const usCountries = [
-  ["united-states", "United States", "US", "NORTH_AMERICA", 160, 0, 30, 120, 8],
+  ["united-states", "United States", "US", "NORTH_AMERICA", 90, 0, 30, 120, 8],
 ];
 
 const canadaCountries = [
-  ["canada", "Canada", "CA", "NORTH_AMERICA", 100, 0, 20, 60, 6],
+  ["canada", "Canada", "CA", "NORTH_AMERICA", 90, 0, 20, 60, 6],
 ];
 
 const australiaCountries = [
-  ["australia", "Australia", "AU", "OCEANIA", 145, 0, 20, 90, 6],
+  ["australia", "Australia", "AU", "OCEANIA", 90, 0, 20, 90, 6],
 ];
 
 const allCountryEntries = [
@@ -100,29 +100,37 @@ const allCountryEntries = [
 ];
 
 // ─── Visa Types ──────────────────────────────────────────
+// Schengen: three short-stay purposes (single/multiple entry is chosen at application, not here).
 const visaTypes = [
-  ["short-stay-tourism", "Short-stay (Tourism)", "short-stay", 1],
-  ["short-stay-business", "Short-stay (Business)", "short-stay", 2],
-  ["airport-transit", "Airport transit", "transit", 3],
-  ["long-stay", "Long-stay / National visa", "long-stay", 4],
-  ["uk-visitor", "UK Standard Visitor Visa", "visitor", 5],
-  ["us-b1b2", "US B1/B2 Visitor Visa", "visitor", 6],
-  ["canada-visitor", "Canada Visitor Visa", "visitor", 7],
-  ["australia-visitor", "Australia Visitor Visa (subclass 600)", "visitor", 8],
+  ["schengen-tourism", "🏖 Tourism (single or multiple entry)", "short-stay", 1],
+  ["schengen-business", "💼 Business (single or multiple entry)", "short-stay", 2],
+  ["schengen-family-friends", "🏠 Visiting family or friends", "short-stay", 3],
+  ["uk-visitor", "UK Standard Visitor Visa", "visitor", 4],
+  ["us-b1b2", "US B1/B2 Visitor Visa", "visitor", 5],
+  ["canada-visitor", "Canada Visitor Visa", "visitor", 6],
+  ["australia-visitor", "Australia Visitor Visa (subclass 600)", "visitor", 7],
+];
+
+const SCHENGEN_VISA_CODES = ["schengen-tourism", "schengen-business", "schengen-family-friends"];
+const ALL_VISA_CODES = [
+  ...SCHENGEN_VISA_CODES,
+  "uk-visitor",
+  "us-b1b2",
+  "canada-visitor",
+  "australia-visitor",
 ];
 
 // ─── Document Templates ─────────────────────────────────
 const documentTemplates = [
-  ["passport", "Valid passport", "Valid for at least 3 months beyond your intended departure from the Schengen area, issued in the last 10 years, with at least 2 blank pages.", true, NationalityCategory.ALL, ["short-stay-tourism", "short-stay-business", "airport-transit", "long-stay", "uk-visitor", "us-b1b2", "canada-visitor", "australia-visitor"]],
-  ["application-form", "Visa application form", "Fully completed and signed visa application form.", true, NationalityCategory.VISA_REQUIRED, ["short-stay-tourism", "short-stay-business", "airport-transit", "long-stay", "uk-visitor", "us-b1b2", "canada-visitor", "australia-visitor"]],
-  ["photo", "Passport-size photo", "Recent colour photo (35x45 mm) meeting ICAO standards.", true, NationalityCategory.VISA_REQUIRED, ["short-stay-tourism", "short-stay-business", "airport-transit", "long-stay", "uk-visitor", "us-b1b2", "canada-visitor", "australia-visitor"]],
-  ["travel-insurance", "Travel health insurance", "Coverage of at least EUR 30,000 for medical emergencies and repatriation, valid for the entire stay in the Schengen area.", true, NationalityCategory.VISA_REQUIRED, ["short-stay-tourism", "short-stay-business", "long-stay"]],
-  ["itinerary", "Travel itinerary", "Round-trip or multi-destination booking (flights, trains) or detailed plan with dates.", true, NationalityCategory.VISA_REQUIRED, ["short-stay-tourism", "short-stay-business", "uk-visitor", "us-b1b2", "canada-visitor", "australia-visitor"]],
-  ["accommodation", "Proof of accommodation", "Hotel reservations, rental agreement, or invitation letter covering the full stay.", true, NationalityCategory.VISA_REQUIRED, ["short-stay-tourism", "short-stay-business", "long-stay", "uk-visitor", "canada-visitor", "australia-visitor"]],
-  ["financial", "Proof of sufficient means", "Bank statements, sponsorship letter, or proof of employment or income demonstrating ability to cover the trip.", true, NationalityCategory.VISA_REQUIRED, ["short-stay-tourism", "short-stay-business", "long-stay", "uk-visitor", "us-b1b2", "canada-visitor", "australia-visitor"]],
-  ["employment", "Employment proof", "Employment letter, leave approval, or for self-employed applicants: business registration and tax returns.", false, NationalityCategory.VISA_REQUIRED, ["short-stay-tourism", "short-stay-business", "uk-visitor", "us-b1b2", "canada-visitor", "australia-visitor"]],
-  ["invitation", "Invitation letter (if applicable)", "For business or family visits: signed invitation from host with their ID and address.", false, NationalityCategory.VISA_REQUIRED, ["short-stay-business", "uk-visitor"]],
-  ["transit-visa", "Destination country visa (for transit)", "If applying for airport transit visa: visa or residence permit for your final destination country.", true, NationalityCategory.VISA_REQUIRED, ["airport-transit"]],
+  ["passport", "Valid passport", "Valid for at least 3 months beyond your intended departure from the Schengen area, issued in the last 10 years, with at least 2 blank pages.", true, NationalityCategory.ALL, ALL_VISA_CODES],
+  ["application-form", "Visa application form", "Fully completed and signed visa application form.", true, NationalityCategory.VISA_REQUIRED, ALL_VISA_CODES],
+  ["photo", "Passport-size photo", "Recent colour photo (35x45 mm) meeting ICAO standards.", true, NationalityCategory.VISA_REQUIRED, ALL_VISA_CODES],
+  ["travel-insurance", "Travel health insurance", "Coverage of at least EUR 30,000 for medical emergencies and repatriation, valid for the entire stay in the Schengen area.", true, NationalityCategory.VISA_REQUIRED, SCHENGEN_VISA_CODES],
+  ["itinerary", "Travel itinerary", "Round-trip or multi-destination booking (flights, trains) or detailed plan with dates.", true, NationalityCategory.VISA_REQUIRED, [...SCHENGEN_VISA_CODES, "uk-visitor", "us-b1b2", "canada-visitor", "australia-visitor"]],
+  ["accommodation", "Proof of accommodation", "Hotel reservations, rental agreement, or invitation letter covering the full stay.", true, NationalityCategory.VISA_REQUIRED, [...SCHENGEN_VISA_CODES, "uk-visitor", "canada-visitor", "australia-visitor"]],
+  ["financial", "Proof of sufficient means", "Bank statements, sponsorship letter, or proof of employment or income demonstrating ability to cover the trip.", true, NationalityCategory.VISA_REQUIRED, [...SCHENGEN_VISA_CODES, "uk-visitor", "us-b1b2", "canada-visitor", "australia-visitor"]],
+  ["employment", "Employment proof", "Employment letter, leave approval, or for self-employed applicants: business registration and tax returns.", false, NationalityCategory.VISA_REQUIRED, [...SCHENGEN_VISA_CODES, "uk-visitor", "us-b1b2", "canada-visitor", "australia-visitor"]],
+  ["invitation", "Invitation letter (if applicable)", "For business or family visits: signed invitation from host with their ID and address.", false, NationalityCategory.VISA_REQUIRED, ["schengen-business", "schengen-family-friends", "uk-visitor"]],
 ];
 
 // ─── Process Steps ───────────────────────────────────────
@@ -280,7 +288,7 @@ async function main() {
         countryId: country.id,
         visaStayLimitDays: stayLimit,
         entryTypeDefault: groupCode === "schengen" ? "Multiple" : "Single",
-        approvalRatePercent: 89,
+        approvalRatePercent: 97,
         overviewText: `Everything you need to know about the visa for ${name}.`,
         importantNotes: `Appointment demand and document review complexity vary for ${name}.`,
         disclaimerText: "Initial backend seed data based on the current frontend prototype.",

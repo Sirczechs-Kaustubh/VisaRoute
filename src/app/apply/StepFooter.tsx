@@ -33,6 +33,7 @@ export function StepFooter({
 
       <div className="flex items-center justify-between">
         <button
+          type="button"
           onClick={onBack}
           className="group flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
         >
@@ -45,6 +46,7 @@ export function StepFooter({
         <span className="text-sm font-medium text-slate-400">{step} of {total}</span>
 
         <button
+          type="button"
           onClick={onNext}
           className="group flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 hover:shadow-md"
         >

@@ -1,3 +1,4 @@
+import { normalizeApprovalRatePercent } from "@/lib/approval-rate";
 import { ApiError } from "@/server/shared/errors";
 import { CountriesRepository, type CountryListFilters } from "./countries.repository";
 
@@ -47,12 +48,12 @@ export class CountriesService {
       heroImageUrl: country.heroImageUrl,
       visaStayLimitDays: country.visaProfile?.visaStayLimitDays ?? null,
       entryTypeDefault: country.visaProfile?.entryTypeDefault ?? null,
-      approvalRatePercent: country.visaProfile?.approvalRatePercent ?? null,
+      approvalRatePercent: normalizeApprovalRatePercent(country.visaProfile?.approvalRatePercent),
       visaProfile: country.visaProfile
         ? {
             visaStayLimitDays: country.visaProfile.visaStayLimitDays,
             entryTypeDefault: country.visaProfile.entryTypeDefault,
-            approvalRatePercent: country.visaProfile.approvalRatePercent,
+            approvalRatePercent: normalizeApprovalRatePercent(country.visaProfile.approvalRatePercent),
           }
         : null,
     }));
@@ -87,12 +88,12 @@ export class CountriesService {
       heroImageUrl: country.heroImageUrl,
       visaStayLimitDays: country.visaProfile?.visaStayLimitDays ?? null,
       entryTypeDefault: country.visaProfile?.entryTypeDefault ?? null,
-      approvalRatePercent: country.visaProfile?.approvalRatePercent ?? null,
+      approvalRatePercent: normalizeApprovalRatePercent(country.visaProfile?.approvalRatePercent),
       visaProfile: country.visaProfile
         ? {
             visaStayLimitDays: country.visaProfile.visaStayLimitDays,
             entryTypeDefault: country.visaProfile.entryTypeDefault,
-            approvalRatePercent: country.visaProfile.approvalRatePercent,
+            approvalRatePercent: normalizeApprovalRatePercent(country.visaProfile.approvalRatePercent),
             overviewText: country.visaProfile.overviewText,
             importantNotes: country.visaProfile.importantNotes,
             disclaimerText: country.visaProfile.disclaimerText,

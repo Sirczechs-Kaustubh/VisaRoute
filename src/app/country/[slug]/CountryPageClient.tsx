@@ -8,6 +8,7 @@ import type {
   DocumentRequirementResponse,
   VisaTypeOption,
 } from "@/lib/contracts";
+import { normalizeApprovalRatePercent } from "@/lib/approval-rate";
 import { ApplyingFrom } from "@/components/ApplyingFrom";
 
 const DOCUMENT_ICONS: Record<string, string> = {
@@ -23,36 +24,22 @@ const DOCUMENT_ICONS: Record<string, string> = {
   "transit-visa": "Transit",
 };
 
-const NATIONALITY_OPTIONS = [
-  { value: "in", label: "Indian passport (visa required)" },
-  { value: "pk", label: "Pakistani passport (visa required)" },
-  { value: "bd", label: "Bangladeshi passport (visa required)" },
-  { value: "ng", label: "Nigerian passport (visa required)" },
-  { value: "other", label: "Other visa-required nationality" },
-  { value: "gb", label: "UK passport (visa exempt)" },
-  { value: "us", label: "US passport (visa exempt)" },
-  { value: "other-exempt", label: "Other visa-exempt nationality" },
-];
+/** MVP: document lists are tailored for Indian passport holders (visa required) only. */
+const NATIONALITY_CATEGORY = "visa-required" as const;
 
-const VISA_EXEMPT_KEYS = new Set(["gb", "us", "other-exempt"]);
-
-function getNationalityCategory(nationalityKey: string) {
-  return VISA_EXEMPT_KEYS.has(nationalityKey) ? "visa-exempt" : "visa-required";
-}
-
-function formatRequirementsUrl(slug: string, visaType: string, nationalityCategory: string) {
+function formatRequirementsUrl(slug: string, visaType: string) {
   const searchParams = new URLSearchParams({
     visaType,
-    nationalityCategory,
+    nationalityCategory: NATIONALITY_CATEGORY,
   });
 
   return `/api/countries/${slug}/document-requirements?${searchParams.toString()}`;
 }
 
-function getVisaByDate(leadWeeks: number) {
+/** Rough “ready by” estimate from typical processing window (not appointment lead). */
+function getEstimatedDecisionDate(processingDaysMax: number) {
   const nextDate = new Date();
-  nextDate.setDate(nextDate.getDate() + Math.max(leadWeeks * 7 + 30, 21));
-
+  nextDate.setDate(nextDate.getDate() + Math.max(processingDaysMax + 21, 45));
   return nextDate.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
@@ -70,8 +57,7 @@ export function CountryPageClient({
   initialRequirements: DocumentRequirementResponse | null;
 }) {
   const [activeTab, setActiveTab] = useState<"overview" | "documents" | "process">("overview");
-  const [visaType, setVisaType] = useState(visaTypes[0]?.code ?? "short-stay-tourism");
-  const [nationalityKey, setNationalityKey] = useState("in");
+  const [visaType, setVisaType] = useState(visaTypes[0]?.code ?? "schengen-tourism");
   const [requirements, setRequirements] = useState<DocumentRequirementResponse | null>(
     initialRequirements,
   );
@@ -81,17 +67,15 @@ export function CountryPageClient({
   const [isSubmittingAlert, startAlertSubmission] = useTransition();
   const [isLoadingRequirements, startRequirementsLoad] = useTransition();
 
-  const nationalityCategory = getNationalityCategory(nationalityKey);
   const total = country.visaFeeEur + country.ourServiceFeeEur;
-  const visaByDate = getVisaByDate(country.appointmentLeadWeeks);
+  const visaByDate = getEstimatedDecisionDate(country.processingDaysMax);
 
   useEffect(() => {
     startRequirementsLoad(async () => {
       try {
-        const response = await fetch(
-          formatRequirementsUrl(country.slug, visaType, nationalityCategory),
-          { cache: "no-store" },
-        );
+        const response = await fetch(formatRequirementsUrl(country.slug, visaType), {
+          cache: "no-store",
+        });
 
         if (!response.ok) {
           throw new Error("Failed to load requirements");
@@ -104,7 +88,7 @@ export function CountryPageClient({
         setRequirementsError("Could not load document requirements right now.");
       }
     });
-  }, [country.slug, nationalityCategory, visaType]);
+  }, [country.slug, visaType]);
 
   const tabs: { id: "overview" | "documents" | "process"; label: string }[] = [
     { id: "overview", label: "Overview" },
@@ -172,12 +156,6 @@ export function CountryPageClient({
             </select>
           </div>
           <div>
-            <span className="text-sm text-slate-500">Processing</span>
-            <p className="font-semibold text-slate-900">
-              {country.processingDaysMin}-{country.processingDaysMax} days
-            </p>
-          </div>
-          <div>
             <span className="text-sm text-slate-500">Visa Fee</span>
             <p className="font-semibold text-slate-900">EUR {country.visaFeeEur}</p>
           </div>
@@ -191,15 +169,16 @@ export function CountryPageClient({
       <div className="mx-auto max-w-7xl px-4 py-10">
         <div className="grid gap-10 lg:grid-cols-3">
           <div className="space-y-10 lg:col-span-2">
-            <div className="flex gap-1 border-b border-slate-200">
+            <div className="flex gap-0 rounded-lg bg-slate-100/90 p-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-t-lg px-4 py-2 text-sm font-medium transition ${
+                  className={`min-w-0 flex-1 rounded-md px-4 py-2.5 text-sm font-semibold transition ${
                     activeTab === tab.id
-                      ? "border border-slate-200 border-b-white bg-white text-primary-600"
-                      : "text-slate-500 hover:text-slate-700"
+                      ? "bg-white text-primary-700 shadow-sm ring-1 ring-slate-200/80"
+                      : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-800"
                   }`}
                 >
                   {tab.label}
@@ -237,7 +216,7 @@ export function CountryPageClient({
                     <div className="rounded-lg bg-slate-50 p-3">
                       <p className="text-xs text-slate-500">APPROVAL RATE</p>
                       <p className="font-medium text-emerald-600">
-                        ~{country.approvalRatePercent ?? 89}%
+                        ~{normalizeApprovalRatePercent(country.approvalRatePercent)}%
                       </p>
                     </div>
                   </div>
@@ -247,11 +226,11 @@ export function CountryPageClient({
                   <h2 className="mb-4 w-fit border-b-2 border-primary-500 pb-2 text-xl font-semibold text-slate-900">
                     {country.name} Visa Insights
                   </h2>
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="rounded-xl border border-slate-200 bg-white p-6 text-center">
                       <div className="mx-auto mb-2 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
                         <span className="text-2xl font-bold text-emerald-600">
-                          {country.approvalRatePercent ?? 89}%
+                          {normalizeApprovalRatePercent(country.approvalRatePercent)}%
                         </span>
                       </div>
                       <p className="font-medium text-slate-900">Approval Rate</p>
@@ -261,12 +240,6 @@ export function CountryPageClient({
                       <p className="mb-1 text-sm text-slate-500">Processing Time</p>
                       <p className="text-xl font-semibold text-slate-900">
                         {country.processingDaysMin}-{country.processingDaysMax} days
-                      </p>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-white p-6">
-                      <p className="mb-1 text-sm text-slate-500">Appointment Lead</p>
-                      <p className="text-xl font-semibold text-slate-900">
-                        ~{country.appointmentLeadWeeks} weeks
                       </p>
                     </div>
                   </div>
@@ -282,9 +255,6 @@ export function CountryPageClient({
                   <div className="mb-4 flex flex-wrap gap-3">
                     <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
                       Medium demand
-                    </span>
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-800">
-                      Next slot in ~{country.appointmentLeadWeeks} weeks
                     </span>
                   </div>
                   {subscriptionMessage ? (
@@ -358,34 +328,10 @@ export function CountryPageClient({
                   Documents Required
                 </h2>
                 <p className="mb-4 text-slate-600">
-                  Select your nationality to see your personalised checklist.
+                  Checklist for{" "}
+                  <span className="font-medium text-slate-900">Indian passport holders</span>{" "}
+                  (visa required). Other nationalities are not supported in this release.
                 </p>
-                <div className="mb-6 flex flex-wrap gap-4">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-500">
-                      Nationality
-                    </label>
-                    <select
-                      value={nationalityKey}
-                      onChange={(event) => setNationalityKey(event.target.value)}
-                      className="min-w-[240px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    >
-                      {NATIONALITY_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                {nationalityCategory === "visa-exempt" && (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-slate-700">
-                      If you hold a visa-exempt passport, you generally do not need a Schengen visa
-                      for short stays. Documents shown below apply if you still need to apply.
-                    </p>
-                  </div>
-                )}
                 {requirementsError && (
                   <p className="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
                     {requirementsError}
@@ -468,20 +414,6 @@ export function CountryPageClient({
               <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <h4 className="mb-2 font-medium text-slate-900">Have Queries?</h4>
                 <p className="text-sm text-slate-600">Documents, process, price, and timelines.</p>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <h4 className="mb-2 font-medium text-slate-900">Slot Alert</h4>
-                <p className="text-sm text-slate-600">
-                  Next slot: ~{country.appointmentLeadWeeks} weeks
-                </p>
-                <p className="text-xs text-slate-500">Email alerts enabled in phase 1.</p>
-                <Link
-                  href={`/country/${country.slug}#appointments`}
-                  className="mt-2 block rounded-lg border border-primary-600 py-2 text-center text-sm font-medium text-primary-600 hover:bg-primary-50"
-                >
-                  Subscribe to alerts
-                </Link>
               </div>
             </div>
           </div>

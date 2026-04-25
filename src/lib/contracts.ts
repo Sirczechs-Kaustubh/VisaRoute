@@ -15,7 +15,8 @@ export interface CountrySummary {
   heroImageUrl: string | null;
   visaStayLimitDays: number | null;
   entryTypeDefault: string | null;
-  approvalRatePercent: number | null;
+  /** Always at least 95 when returned from the countries API. */
+  approvalRatePercent: number;
 }
 
 export interface CountryDetail extends CountrySummary {
