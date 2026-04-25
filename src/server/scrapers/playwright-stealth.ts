@@ -360,6 +360,9 @@ export async function scrapeVFSIndiaSwitzerland(): Promise<ScrapeResult> {
         console.log("[VFS India CH] Cloudflare challenge detected, waiting...");
         await page.waitForTimeout(15000);
       }
+    } catch (error) {
+      console.error("[VFS India CH] Navigation error:", error);
+    }
 
     const title = await page.title();
     console.log("[VFS India CH] Page title:", title);

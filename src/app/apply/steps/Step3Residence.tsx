@@ -123,7 +123,7 @@ export function Step3Residence({
     () => (isUkResident ? [...RESIDENCE_DOC_TYPES_ALL] : [...NON_UK_RESIDENCE_TYPES]),
     [isUkResident],
   );
-  const residenceDocTypes = docTypesForUser.map((t) => t.value);
+  const residenceDocTypes = docTypesForUser.map((t) => t.value as string);
   const uploadedResidenceDocs = data.uploadedDocuments.filter((d) => residenceDocTypes.includes(d.documentType));
   const showShareCode = isUkResident && data.applyingFromCountry === "gb";
 
