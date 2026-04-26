@@ -30,6 +30,9 @@ export const travelPlanSchema = z
     accommodationType: nullableTrimmedString,
     entryCity: nullableTrimmedString,
     multiCountryMode: nullableTrimmedString,
+    otherSchengenCountries: z.string().trim().max(2000).nullable().optional(),
+    nightsInVisaDestination: z.number().int().min(0).max(365).nullable().optional(),
+    schengenFirstEntryDate: z.string().trim().max(32).nullable().optional(),
   })
   .strict();
 
@@ -37,6 +40,18 @@ export const companionGroupSchema = z
   .object({
     travellingWithCompanions: nullableTrimmedString,
     companionsCount: z.number().int().min(0).max(20).nullable().optional(),
+    companionMembers: z
+      .array(
+        z
+          .object({
+            name: nullableTrimmedString,
+            relationship: nullableTrimmedString,
+            passportNumber: nullableTrimmedString,
+          })
+          .strict(),
+      )
+      .max(20)
+      .optional(),
   })
   .strict();
 

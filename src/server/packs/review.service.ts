@@ -86,6 +86,9 @@ export class ReviewService {
             ? ACCOMMODATION_LABELS[tp.accommodationType] ?? tp.accommodationType
             : null,
           multiCountry: tp?.multiCountryMode ?? null,
+          otherSchengenCountries: tp?.otherSchengenCountries ?? null,
+          nightsInVisaDestination: tp?.nightsInVisaDestination ?? null,
+          schengenFirstEntryDate: tp?.schengenFirstEntryDate ?? null,
         },
         companions: {
           travelling: cg?.travellingWithCompanions ?? null,

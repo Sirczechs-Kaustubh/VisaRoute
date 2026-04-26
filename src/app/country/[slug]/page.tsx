@@ -5,7 +5,7 @@ import { RulesService } from "@/server/rules/rules.service";
 import { CountryPageClient } from "./CountryPageClient";
 
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params: { slug: string };
 }
 
 const countriesService = new CountriesService();
@@ -17,13 +17,20 @@ export async function generateStaticParams() {
 }
 
 export default async function CountryPage({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug } = params;
   let country: CountryDetail | null = null;
   let visaTypes: VisaTypeOption[] = [];
   let initialRequirements: DocumentRequirementResponse | null = null;
 
   try {
     country = await countriesService.getCountryBySlug(slug);
+  } catch {
+    country = null;
+  }
+
+  if (!country) notFound();
+
+  try {
     visaTypes = await rulesService.listVisaTypesForCountryGroup(country.countryGroupCode);
     const defaultVisaCode = visaTypes[0]?.code ?? "schengen-tourism";
     initialRequirements = await rulesService.getDocumentRequirements(slug, {
@@ -31,10 +38,9 @@ export default async function CountryPage({ params }: PageProps) {
       nationalityCategory: "visa-required",
     });
   } catch {
-    country = null;
+    visaTypes = [];
+    initialRequirements = null;
   }
-
-  if (!country) notFound();
 
   return (
     <CountryPageClient

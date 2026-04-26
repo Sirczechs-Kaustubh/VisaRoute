@@ -221,7 +221,7 @@ export function Step9Documents({
   const isEmployed = data.employmentStatus === "employed";
   const isSelfEmployed = data.employmentStatus === "self-employed";
   const isVisiting = data.purposeOfTravel === "visiting";
-  const isBusinessOrMedical = data.purposeOfTravel === "business" || data.purposeOfTravel === "medical";
+  const isBusiness = data.purposeOfTravel === "business";
   const isTourism = data.purposeOfTravel === "tourism";
 
   function getDoc(docId: string, altTypes?: string[]): UploadedDocument | undefined {
@@ -274,7 +274,7 @@ export function Step9Documents({
   const goodToHaveDocs: DocConfig[] = [
     GOOD_TO_HAVE_DOCS[0], // cover letter — always
     ...(isVisiting ? [GOOD_TO_HAVE_DOCS[1]] : []),
-    ...(isBusinessOrMedical ? [GOOD_TO_HAVE_DOCS[2]] : []),
+    ...(isBusiness ? [GOOD_TO_HAVE_DOCS[2]] : []),
     ...(isTourism ? [GOOD_TO_HAVE_DOCS[3]] : []),
   ];
 

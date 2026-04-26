@@ -28,7 +28,8 @@ export function Step4Travel({
   return (
     <>
       <TipBox icon="✈️">
-        Embassies prefer applications for the country where you&apos;ll spend the most nights – your entry point should match.
+        On a multi-country Schengen trip, you usually apply where you&apos;ll spend the <strong>most nights</strong>.
+        List each stop and how long you&apos;ll stay so your itinerary matches what you tell the consulate.
       </TipBox>
 
       <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 4 of 13</p>

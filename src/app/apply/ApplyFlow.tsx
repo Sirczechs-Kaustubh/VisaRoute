@@ -16,8 +16,15 @@ import { Step10Checks } from "./steps/Step10Checks";
 import { Step11Review } from "./steps/Step11Review";
 import { Step12Pack } from "./steps/Step12Pack";
 import { Step13Appointment } from "./steps/Step13Appointment";
+import {
+  DEFAULT_PHONE_DIAL,
+  formatPhoneForStorage,
+  parseStoredPhone,
+} from "@/lib/phone-dial-codes";
 
 const SINGLE_INSTANCE_DOC_TYPES = ["passport", "passport_back", "residence_permit", "brp", "visa_vignette", "evisa", "photo"];
+
+const ALLOWED_PURPOSES = new Set(["tourism", "business", "visiting"]);
 function isSingleInstance(docType: string) {
   return SINGLE_INSTANCE_DOC_TYPES.includes(docType);
 }
@@ -41,11 +48,20 @@ export interface UploadedDocument {
   } | null;
 }
 
+export interface CompanionMember {
+  name: string;
+  relationship: string;
+  passportNumber: string;
+}
+
 export interface ApplicationData {
   applyingFromCountry: string;
   firstName: string;
   lastName: string;
   email: string;
+  /** E.164-style dial, e.g. +91 */
+  phoneDialCode: string;
+  /** National number only (no country code). */
   phoneNumber: string;
   countryOfResidence: string;
   purposeOfTravel: string;
@@ -53,6 +69,7 @@ export interface ApplicationData {
   travelEndDate: string;
   travellingWithCompanions: string;
   companionsCount: number;
+  companionMembers: CompanionMember[];
   visitedSchengenBefore: string;
   previousTravelVisits: { country: string; year: string }[];
   previousVisaRejections: string;
@@ -62,6 +79,12 @@ export interface ApplicationData {
   accommodation: string;
   entryCity: string;
   multiCountry: string;
+  /** Other Schengen countries / nights (required when multiCountry is "yes") */
+  otherSchengenCountries: string;
+  /** Nights in the country the visa is for (numeric string for inputs) */
+  nightsInVisaDestination: string;
+  /** First day in the Schengen area (yyyy-mm-dd) when visiting multiple countries */
+  schengenFirstEntryDate: string;
   employmentStatus: string;
   documents: Record<string, { file: File; name: string }>;
   uploadedDocuments: UploadedDocument[];
@@ -119,6 +142,7 @@ function emptyApplicationData(): ApplicationData {
     firstName: "",
     lastName: "",
     email: "",
+    phoneDialCode: DEFAULT_PHONE_DIAL,
     phoneNumber: "",
     countryOfResidence: "",
     purposeOfTravel: "",
@@ -126,6 +150,7 @@ function emptyApplicationData(): ApplicationData {
     travelEndDate: "",
     travellingWithCompanions: "",
     companionsCount: 0,
+    companionMembers: [],
     visitedSchengenBefore: "",
     previousTravelVisits: [],
     previousVisaRejections: "",
@@ -135,6 +160,9 @@ function emptyApplicationData(): ApplicationData {
     accommodation: "",
     entryCity: "",
     multiCountry: "",
+    otherSchengenCountries: "",
+    nightsInVisaDestination: "",
+    schengenFirstEntryDate: "",
     employmentStatus: "",
     documents: {},
     uploadedDocuments: [],
@@ -163,19 +191,23 @@ function formatDate(value: string | Date | null | undefined) {
 }
 
 function hydrateFromDraft(draft: ApplicationDraft): ApplicationData {
+  const phoneParts = parseStoredPhone(draft.applicantProfile?.phoneNumber ?? "");
+  const rawPurpose = draft.applicantProfile?.purposeOfTravel ?? "";
   return {
     ...emptyApplicationData(),
     applyingFromCountry: draft.applyingFromCountry ?? "",
     firstName: draft.applicantProfile?.firstName ?? "",
     lastName: draft.applicantProfile?.lastName ?? "",
     email: draft.applicantProfile?.email ?? "",
-    phoneNumber: draft.applicantProfile?.phoneNumber ?? "",
+    phoneDialCode: phoneParts.dial,
+    phoneNumber: phoneParts.local,
     countryOfResidence: draft.applicantProfile?.countryOfResidence ?? "",
-    purposeOfTravel: draft.applicantProfile?.purposeOfTravel ?? "",
+    purposeOfTravel: ALLOWED_PURPOSES.has(rawPurpose) ? rawPurpose : "",
     travelStartDate: formatDate(draft.applicantProfile?.travelStartDate),
     travelEndDate: formatDate(draft.applicantProfile?.travelEndDate),
     travellingWithCompanions: draft.companionGroup?.travellingWithCompanions ?? "",
     companionsCount: draft.companionGroup?.companionsCount ?? 0,
+    companionMembers: [],
     visitedSchengenBefore: draft.visaHistoryEntries.length > 0 ? "yes" : "",
     previousTravelVisits: draft.visaHistoryEntries.map((entry) => ({
       country: entry.countryName ?? "",
@@ -191,6 +223,12 @@ function hydrateFromDraft(draft: ApplicationDraft): ApplicationData {
     accommodation: draft.travelPlan?.accommodationType ?? "",
     entryCity: draft.travelPlan?.entryCity ?? "",
     multiCountry: draft.travelPlan?.multiCountryMode ?? "",
+    otherSchengenCountries: draft.travelPlan?.otherSchengenCountries ?? "",
+    nightsInVisaDestination:
+      draft.travelPlan?.nightsInVisaDestination != null
+        ? String(draft.travelPlan.nightsInVisaDestination)
+        : "",
+    schengenFirstEntryDate: draft.travelPlan?.schengenFirstEntryDate ?? "",
     employmentStatus: draft.employmentProfile?.employmentStatus ?? "",
     uploadedDocuments: (draft.documents ?? []).map((doc) => ({
       id: doc.id,
@@ -207,6 +245,12 @@ function emptyToNull(value: string | undefined) {
   return t ? t : null;
 }
 
+function parsePositiveInt(value: string | undefined): number | null {
+  const n = parseInt(String(value ?? "").trim(), 10);
+  if (Number.isNaN(n) || n < 1) return null;
+  return n;
+}
+
 function buildDraftPayload(data: ApplicationData, step: number) {
   return {
     currentStep: step,
@@ -215,7 +259,7 @@ function buildDraftPayload(data: ApplicationData, step: number) {
       firstName: emptyToNull(data.firstName),
       lastName: emptyToNull(data.lastName),
       email: emptyToNull(data.email),
-      phoneNumber: emptyToNull(data.phoneNumber),
+      phoneNumber: formatPhoneForStorage(data.phoneDialCode, data.phoneNumber),
       countryOfResidence: emptyToNull(data.countryOfResidence),
       purposeOfTravel: emptyToNull(data.purposeOfTravel),
       travelStartDate: data.travelStartDate?.trim() || null,
@@ -225,11 +269,25 @@ function buildDraftPayload(data: ApplicationData, step: number) {
       accommodationType: emptyToNull(data.accommodation),
       entryCity: emptyToNull(data.entryCity),
       multiCountryMode: emptyToNull(data.multiCountry),
+      otherSchengenCountries:
+        data.multiCountry === "yes" ? emptyToNull(data.otherSchengenCountries) : null,
+      nightsInVisaDestination:
+        data.multiCountry === "yes" ? parsePositiveInt(data.nightsInVisaDestination) : null,
+      schengenFirstEntryDate:
+        data.multiCountry === "yes" ? emptyToNull(data.schengenFirstEntryDate) : null,
     },
     companionGroup: {
       travellingWithCompanions: emptyToNull(data.travellingWithCompanions),
       companionsCount:
         data.travellingWithCompanions === "yes" ? data.companionsCount || 0 : data.companionsCount,
+      companionMembers:
+        data.travellingWithCompanions === "yes"
+          ? data.companionMembers.slice(0, Math.max(data.companionsCount || 0, 0)).map((member) => ({
+              name: emptyToNull(member.name),
+              relationship: emptyToNull(member.relationship),
+              passportNumber: emptyToNull(member.passportNumber),
+            }))
+          : [],
     },
     employmentProfile: {
       employmentStatus: emptyToNull(data.employmentStatus),
@@ -563,7 +621,7 @@ export function ApplyFlow({
             {/* Step content */}
             <div className="animate-in fade-in duration-200">
               {step === 1 && (
-                <Step1Intro data={data} updateData={updateData} countryName={countryName} onNext={handleNext} onBack={handleBack} />
+                <Step1Intro data={data} updateData={updateData} onNext={handleNext} onBack={handleBack} />
               )}
               {step === 2 && (
                 <Step2Passport data={data} updateData={updateData} countryName={countryName} onNext={handleNext} onBack={handleBack} uploadDocument={uploadDocument} deleteDocument={deleteDocument} />
