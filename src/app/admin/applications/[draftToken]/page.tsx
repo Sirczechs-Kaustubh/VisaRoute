@@ -137,6 +137,20 @@ export default async function AdminApplicationDetail({
               <InfoRow label="Entry city" value={application.travelPlan.entryCity} />
               <InfoRow label="Accommodation" value={application.travelPlan.accommodationType} />
               <InfoRow label="Multi-country" value={application.travelPlan.multiCountryMode} />
+              {application.travelPlan.multiCountryMode === "yes" && (
+                <>
+                  <InfoRow label="Other Schengen countries" value={application.travelPlan.otherSchengenCountries} />
+                  <InfoRow
+                    label="Nights in visa destination"
+                    value={
+                      application.travelPlan.nightsInVisaDestination != null
+                        ? String(application.travelPlan.nightsInVisaDestination)
+                        : null
+                    }
+                  />
+                  <InfoRow label="First Schengen entry" value={application.travelPlan.schengenFirstEntryDate} />
+                </>
+              )}
             </Section>
           )}
 

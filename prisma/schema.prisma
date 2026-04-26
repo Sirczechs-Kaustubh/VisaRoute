@@ -249,15 +249,21 @@ model ApplicantProfile {
 }
 
 model TravelPlan {
-  id                String      @id @default(cuid())
-  applicationId     String      @unique
-  accommodationType String?
-  entryCity         String?
-  multiCountryMode  String?
-  tripLengthDays    Int?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  application       Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  id                       String      @id @default(cuid())
+  applicationId          String      @unique
+  accommodationType      String?
+  entryCity              String?
+  multiCountryMode       String?
+  /// Other Schengen countries visited (free text, e.g. "Germany, Italy — 3 nights each")
+  otherSchengenCountries String?
+  /// Nights spent in the country the visa is applied for (main destination)
+  nightsInVisaDestination Int?
+  /// First calendar day the traveller enters the Schengen area (yyyy-mm-dd)
+  schengenFirstEntryDate String?
+  tripLengthDays         Int?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  application            Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 }
 
 model CompanionGroup {

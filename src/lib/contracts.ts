@@ -134,6 +134,9 @@ export interface ApplicationDraft {
     accommodationType: string | null;
     entryCity: string | null;
     multiCountryMode: string | null;
+    otherSchengenCountries?: string | null;
+    nightsInVisaDestination?: number | null;
+    schengenFirstEntryDate?: string | null;
     tripLengthDays?: number | null;
   } | null;
   companionGroup: {

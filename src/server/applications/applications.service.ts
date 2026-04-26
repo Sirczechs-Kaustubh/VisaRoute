@@ -126,6 +126,9 @@ function calculateCompletionPercent(application: {
     accommodationType?: string | null;
     entryCity?: string | null;
     multiCountryMode?: string | null;
+    otherSchengenCountries?: string | null;
+    nightsInVisaDestination?: number | null;
+    schengenFirstEntryDate?: string | null;
   } | null;
   companionGroup: {
     travellingWithCompanions?: string | null;
@@ -150,11 +153,14 @@ function calculateCompletionPercent(application: {
     completedSteps += 1;
   }
 
-  if (
-    application.travelPlan?.accommodationType &&
-    application.travelPlan?.entryCity &&
-    application.travelPlan?.multiCountryMode
-  ) {
+  const tp = application.travelPlan;
+  const multiOk =
+    tp?.multiCountryMode !== "yes" ||
+    (Boolean(tp?.otherSchengenCountries?.trim()) &&
+      typeof tp?.nightsInVisaDestination === "number" &&
+      tp.nightsInVisaDestination > 0 &&
+      Boolean(tp?.schengenFirstEntryDate?.trim()));
+  if (tp?.accommodationType && tp?.entryCity && tp?.multiCountryMode && multiOk) {
     completedSteps += 1;
   }
 
@@ -207,6 +213,9 @@ function toTravelPlanInput(
     accommodationType: travelPlan.accommodationType,
     entryCity: travelPlan.entryCity,
     multiCountryMode: travelPlan.multiCountryMode,
+    otherSchengenCountries: travelPlan.otherSchengenCountries ?? null,
+    nightsInVisaDestination: travelPlan.nightsInVisaDestination ?? null,
+    schengenFirstEntryDate: travelPlan.schengenFirstEntryDate ?? null,
   };
 }
 
@@ -220,6 +229,7 @@ function toCompanionGroupInput(
   return {
     travellingWithCompanions: companionGroup.travellingWithCompanions,
     companionsCount: companionGroup.companionsCount,
+    companionMembers: [],
   };
 }
 
@@ -311,10 +321,18 @@ export class ApplicationsService {
         accommodationType?: string | null;
         entryCity?: string | null;
         multiCountryMode?: string | null;
+        otherSchengenCountries?: string | null;
+        nightsInVisaDestination?: number | null;
+        schengenFirstEntryDate?: string | null;
       };
       companionGroup?: {
         travellingWithCompanions?: string | null;
         companionsCount?: number | null;
+        companionMembers?: {
+          name?: string | null;
+          relationship?: string | null;
+          passportNumber?: string | null;
+        }[];
       };
       employmentProfile?: {
         employmentStatus?: string | null;
@@ -425,12 +443,18 @@ export class ApplicationsService {
             accommodationType: mergedTravelPlan?.accommodationType ?? null,
             entryCity: mergedTravelPlan?.entryCity ?? null,
             multiCountryMode: mergedTravelPlan?.multiCountryMode ?? null,
+            otherSchengenCountries: mergedTravelPlan?.otherSchengenCountries ?? null,
+            nightsInVisaDestination: mergedTravelPlan?.nightsInVisaDestination ?? null,
+            schengenFirstEntryDate: mergedTravelPlan?.schengenFirstEntryDate ?? null,
             tripLengthDays: calculateTripLengthDays(profileStartDate, profileEndDate),
           },
           update: {
             accommodationType: mergedTravelPlan?.accommodationType ?? null,
             entryCity: mergedTravelPlan?.entryCity ?? null,
             multiCountryMode: mergedTravelPlan?.multiCountryMode ?? null,
+            otherSchengenCountries: mergedTravelPlan?.otherSchengenCountries ?? null,
+            nightsInVisaDestination: mergedTravelPlan?.nightsInVisaDestination ?? null,
+            schengenFirstEntryDate: mergedTravelPlan?.schengenFirstEntryDate ?? null,
             tripLengthDays: calculateTripLengthDays(profileStartDate, profileEndDate),
           },
         },
