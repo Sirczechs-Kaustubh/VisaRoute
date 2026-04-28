@@ -8,9 +8,8 @@ interface PackData {
   id: string;
   status: string;
   generatedAt: string;
-  generationMethod?: "ai" | "template";
-  coverLetter: { text: string; docxUrl?: string | null; txtUrl?: string | null; url?: string | null };
-  checklist: { text: string; docxUrl?: string | null; url?: string | null };
+  coverLetter: { text: string; docxUrl?: string | null };
+  checklist: { text: string; docxUrl?: string | null };
   summary?: { docxUrl?: string | null };
 }
 
@@ -27,51 +26,30 @@ function DownloadButton({ href, label, icon }: { href: string; label: string; ic
 }
 
 export function Step12Pack({
-  data,
-  countryName,
-  onNext,
   onBack,
+  onNext,
   draftToken,
 }: {
   data: ApplicationData;
   countryName: string;
-  onNext: () => void;
   onBack: () => void;
+  onNext: () => void;
   draftToken?: string | null;
 }) {
   const [pack, setPack] = useState<PackData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"cover" | "checklist">("cover");
 
   useEffect(() => {
     if (!draftToken) { setLoading(false); return; }
+    setLoading(true);
+    setError(null);
     fetch(`/api/applications/${draftToken}/pack`)
       .then((r) => r.json())
-      .then((d) => { if (d.pack) setPack(d.pack); })
-      .catch(() => {})
+      .then((d) => { if (d.pack) setPack(d.pack); else setError("Could not prepare visa pack"); })
+      .catch(() => setError("Could not prepare visa pack"))
       .finally(() => setLoading(false));
   }, [draftToken]);
-
-  async function handleGenerate() {
-    if (!draftToken) return;
-    setGenerating(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/applications/${draftToken}/pack`, { method: "POST" });
-      const body = await res.json();
-      if (!res.ok) {
-        setError(body.error?.message ?? "Failed to generate pack");
-        return;
-      }
-      setPack(body.pack);
-    } catch {
-      setError("Failed to generate pack");
-    } finally {
-      setGenerating(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -81,7 +59,6 @@ export function Step12Pack({
     );
   }
 
-  const coverDocxUrl = pack?.coverLetter.docxUrl ?? null;
   const checklistDocxUrl = pack?.checklist.docxUrl ?? null;
   const summaryDocxUrl = pack?.summary?.docxUrl ?? null;
 
@@ -91,118 +68,43 @@ export function Step12Pack({
         Submit your documents in the order shown in the checklist — consulates process ordered packets faster.
       </TipBox>
 
-      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 10 of 11</p>
+      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 10 of 13</p>
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-        Application checklist &amp; summary.
+        Download your visa pack.
       </h1>
       <p className="mt-2 text-slate-600">
-        We&apos;ll produce a document checklist and full application summary as editable Word files — confirming everything is in order before you submit.
+        This stage is download-only: application form, checklist, and one ZIP with all uploaded documents.
       </p>
-
-      {!pack && (
-        <>
-          <div className="mt-8">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">What will be generated</h2>
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {[
-                { icon: "✅", label: "Document checklist", desc: "Status of all your uploaded documents with completeness check" },
-                { icon: "📋", label: "Application summary", desc: "Full overview of your application details" },
-              ].map((item) => (
-                <div key={item.label} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4">
-                  <span className="text-2xl">{item.icon}</span>
-                  <div>
-                    <p className="font-semibold text-slate-900">{item.label}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {error && (
-            <div className="mt-4 rounded-xl bg-red-50 p-3">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={generating}
-            className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-4 text-base font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-          >
-            {generating ? (
-              <>
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <span>✨</span> Generate checklist &amp; summary
-              </>
-            )}
-          </button>
-        </>
-      )}
 
       {pack && (
         <div className="mt-8">
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
             <p className="flex items-center gap-2 text-sm font-medium text-emerald-800">
-              <span>✓</span> Pack generated
-              {pack.generationMethod === "ai" && (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">AI-personalised</span>
-              )}
+              <span>✓</span> Pack ready for download
             </p>
           </div>
 
-          {/* Download buttons */}
-          <div className="mt-5 flex flex-wrap gap-3">
-            {coverDocxUrl && <DownloadButton href={coverDocxUrl} label="Cover Letter (.docx)" icon="✉️" />}
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {summaryDocxUrl && <DownloadButton href={summaryDocxUrl} label="Visa Application Form (.docx)" icon="📋" />}
             {checklistDocxUrl && <DownloadButton href={checklistDocxUrl} label="Checklist (.docx)" icon="✅" />}
-            {summaryDocxUrl && <DownloadButton href={summaryDocxUrl} label="Summary (.docx)" icon="📋" />}
+            {draftToken && (
+              <DownloadButton
+                href={`/api/applications/${draftToken}/pack/bundle`}
+                label="Full Folder (Application + Documents).zip"
+                icon="🗂️"
+              />
+            )}
           </div>
-
-          {/* Tabs for text preview */}
-          <div className="mt-6 flex gap-1 rounded-lg bg-slate-100 p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab("cover")}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
-                activeTab === "cover" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Cover Letter
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("checklist")}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
-                activeTab === "checklist" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Checklist
-            </button>
-          </div>
-
-          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
-            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-slate-700">
-              {activeTab === "cover" ? pack.coverLetter.text : pack.checklist.text}
-            </pre>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={generating}
-            className="mt-4 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60"
-          >
-            {generating ? "Regenerating..." : "↻ Regenerate pack"}
-          </button>
         </div>
       )}
 
-      <StepFooter step={10} total={11} onBack={onBack} onNext={onNext} />
+      {error && (
+        <div className="mt-4 rounded-xl bg-red-50 p-3">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      <StepFooter step={10} total={13} onBack={onBack} onNext={onNext} nextLabel="Continue to appointment tracking" />
     </>
   );
 }
