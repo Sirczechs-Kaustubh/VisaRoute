@@ -1,4 +1,5 @@
 import { db } from "@/db/client";
+import JSZip from "jszip";
 import { ApiError } from "@/server/shared/errors";
 import { getStorage, generateStorageKey } from "@/server/documents/storage";
 import { isAIEnabled, generateText } from "@/server/ai/openrouter";
@@ -439,7 +440,7 @@ export class PackService {
     }
 
     if (!application.generatedPack) {
-      return null;
+      return this.generatePack(draftToken);
     }
 
     const pack = application.generatedPack;
@@ -460,6 +461,59 @@ export class PackService {
       summary: {
         docxUrl: pack.summaryStorageKey ? storage.getUrl(pack.summaryStorageKey) : null,
       },
+    };
+  }
+
+  async buildBundle(draftToken: string) {
+    const application = await db.application.findUnique({
+      where: { draftToken },
+      include: {
+        country: true,
+        documents: {
+          where: { uploadStatus: { not: "DELETED" } },
+        },
+        generatedPack: true,
+      },
+    });
+
+    if (!application) {
+      throw new ApiError(404, "APPLICATION_NOT_FOUND", "Application draft not found");
+    }
+
+    let generatedPack = application.generatedPack;
+    if (!generatedPack) {
+      await this.generatePack(draftToken);
+      const refreshed = await db.application.findUnique({
+        where: { draftToken },
+        include: { generatedPack: true },
+      });
+      generatedPack = refreshed?.generatedPack ?? null;
+    }
+
+    const storage = getStorage();
+    const zip = new JSZip();
+    const rootDir = `${application.country.slug}-${draftToken.slice(0, 8)}-visa-pack`;
+
+    if (generatedPack?.summaryStorageKey) {
+      const summary = await storage.read(generatedPack.summaryStorageKey);
+      zip.file(`${rootDir}/application-form.docx`, summary);
+    }
+
+    if (generatedPack?.checklistStorageKey) {
+      const checklist = await storage.read(generatedPack.checklistStorageKey);
+      zip.file(`${rootDir}/checklist.docx`, checklist);
+    }
+
+    for (const doc of application.documents) {
+      const file = await storage.read(doc.storageKey);
+      const safeName = (doc.originalFileName || `${doc.documentType}.bin`).replace(/[\\/:*?"<>|]/g, "_");
+      zip.file(`${rootDir}/documents/${safeName}`, file);
+    }
+
+    const buffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 6 } });
+    return {
+      fileName: `${rootDir}.zip`,
+      buffer,
     };
   }
 }

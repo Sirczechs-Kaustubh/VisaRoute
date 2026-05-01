@@ -48,14 +48,16 @@ function Field({ label, value }: { label: string; value: string | null | number 
 
 export function Step11Review({
   data,
+  updateData,
   countryName,
-  onNext,
+  onSubmit,
   onBack,
   draftToken,
 }: {
   data: ApplicationData;
+  updateData: (u: Partial<ApplicationData>) => void;
   countryName: string;
-  onNext: () => void;
+  onSubmit: () => void;
   onBack: () => void;
   draftToken?: string | null;
 }) {
@@ -87,13 +89,90 @@ export function Step11Review({
         Double-check your travel dates match exactly across your flight booking, hotel, and application form.
       </TipBox>
 
-      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 9 of 11</p>
+      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-slate-500">Step 9 of 10</p>
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-        Review your application.
+        Review & submit your application.
       </h1>
       <p className="mt-2 text-slate-600">
-        Check everything before we build your application pack.
+        Review all details, make final edits, then submit. Critical identity/document fields are locked.
       </p>
+
+      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Locked critical fields</p>
+        <p className="mt-1 text-sm text-slate-700">
+          Destination country, passport details, and uploaded documents are locked at this stage.
+        </p>
+      </div>
+
+      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
+        <h2 className="font-semibold text-slate-900">Quick edits before submit</h2>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">First name</label>
+            <input
+              type="text"
+              value={data.firstName}
+              onChange={(e) => updateData({ firstName: e.target.value })}
+              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">Last name</label>
+            <input
+              type="text"
+              value={data.lastName}
+              onChange={(e) => updateData({ lastName: e.target.value })}
+              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">Email</label>
+            <input
+              type="email"
+              value={data.email}
+              onChange={(e) => updateData({ email: e.target.value })}
+              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">Phone number</label>
+            <input
+              type="tel"
+              value={data.phoneNumber}
+              onChange={(e) => updateData({ phoneNumber: e.target.value })}
+              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">Purpose of travel</label>
+            <select
+              value={data.purposeOfTravel}
+              onChange={(e) => updateData({ purposeOfTravel: e.target.value })}
+              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+            >
+              <option value="">Select purpose...</option>
+              <option value="tourism">Tourism</option>
+              <option value="business">Business</option>
+              <option value="visiting">Visiting family</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">Employment status</label>
+            <select
+              value={data.employmentStatus}
+              onChange={(e) => updateData({ employmentStatus: e.target.value })}
+              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+            >
+              <option value="">Select status...</option>
+              <option value="employed">Employed</option>
+              <option value="self-employed">Self-employed</option>
+              <option value="student">Student</option>
+              <option value="retired">Retired</option>
+              <option value="unemployed">Unemployed</option>
+            </select>
+          </div>
+        </div>
+      </section>
 
       {r && r.warnings.length > 0 && (
         <div className="mt-4 space-y-2">
@@ -217,7 +296,7 @@ export function Step11Review({
         </section>
       </div>
 
-      <StepFooter step={9} total={11} onBack={onBack} onNext={onNext} />
+      <StepFooter step={9} total={10} onBack={onBack} onNext={onSubmit} nextLabel="Submit application" />
     </>
   );
 }

@@ -5,14 +5,16 @@ export function StepFooter({
   total,
   onBack,
   onNext,
+  nextLabel = "Continue",
+  hideNext = false,
 }: {
   step: number;
   total: number;
   onBack: () => void;
   onNext: () => void;
+  nextLabel?: string;
+  hideNext?: boolean;
 }) {
-  const progress = (step / total) * 100;
-
   return (
     <div className="mt-10 border-t border-slate-200 pt-8">
       {/* Progress dots */}
@@ -45,16 +47,20 @@ export function StepFooter({
 
         <span className="text-sm font-medium text-slate-400">{step} of {total}</span>
 
-        <button
-          type="button"
-          onClick={onNext}
-          className="group flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 hover:shadow-md"
-        >
-          Continue
-          <svg className="h-4 w-4 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+        {hideNext ? (
+          <div />
+        ) : (
+          <button
+            type="button"
+            onClick={onNext}
+            className="group flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 hover:shadow-md"
+          >
+            {nextLabel}
+            <svg className="h-4 w-4 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );
