@@ -229,7 +229,7 @@ function toCompanionGroupInput(
   return {
     travellingWithCompanions: companionGroup.travellingWithCompanions,
     companionsCount: companionGroup.companionsCount,
-    companionMembers: [],
+    companionMembers: [] as { name?: string | null; relationship?: string | null; passportNumber?: string | null }[],
   };
 }
 
