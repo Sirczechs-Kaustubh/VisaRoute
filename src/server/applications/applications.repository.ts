@@ -8,11 +8,12 @@ export class ApplicationsRepository {
     });
   }
 
-  async createDraft(params: { countryId: string; draftToken: string }) {
+  async createDraft(params: { countryId: string; draftToken: string; userId?: string }) {
     return db.application.create({
       data: {
         countryId: params.countryId,
         draftToken: params.draftToken,
+        userId: params.userId,
       },
       include: {
         country: true,

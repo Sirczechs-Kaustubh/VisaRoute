@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ApplyingFrom } from "@/components/ApplyingFrom";
 import { DestinationSearch } from "@/components/DestinationSearch";
+import { NavAuth } from "@/components/NavAuth";
+import { ContactAgentModal } from "@/components/ContactAgentModal";
 import { CountriesService } from "@/server/countries/countries.service";
 
 const countriesService = new CountriesService();
@@ -9,6 +11,7 @@ export default async function HomePage() {
   const countries = await countriesService.listCountries({});
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-sky-50/30">
       <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
@@ -26,6 +29,7 @@ export default async function HomePage() {
           <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-6">
             <ApplyingFrom />
             <p className="hidden text-sm font-medium text-slate-500 sm:block">Schengen visa made simple</p>
+            <NavAuth />
           </div>
         </div>
       </header>
@@ -88,5 +92,7 @@ export default async function HomePage() {
         </p>
       </main>
     </div>
+    <ContactAgentModal />
+    </>
   );
 }

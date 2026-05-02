@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ApplicationDraft } from "@/lib/contracts";
+import { createClient } from "@/utils/supabase/client";
+import { ContactAgentModal } from "@/components/ContactAgentModal";
 import { ApplySidebar } from "./ApplySidebar";
 import { Step1Intro } from "./steps/Step1Intro";
 import { Step2Passport } from "./steps/Step2Passport";
@@ -141,6 +143,7 @@ interface ApplyFlowProps {
   visaFeeEur: number;
   serviceFeeEur: number;
   initialDraft: ApplicationDraft | null;
+  userEmail?: string;
 }
 
 function emptyApplicationData(): ApplicationData {
@@ -333,6 +336,7 @@ export function ApplyFlow({
   visaFeeEur,
   serviceFeeEur,
   initialDraft,
+  userEmail,
 }: ApplyFlowProps) {
   const router = useRouter();
   const [draftToken, setDraftToken] = useState(initialDraft?.draftToken ?? null);
@@ -560,6 +564,7 @@ export function ApplyFlow({
   const progressPercent = Math.max(initialDraft?.completionPercent ?? 0, Math.round((step / TOTAL_STEPS) * 100));
 
   return (
+    <>
     <div className="flex min-h-screen">
       <ApplySidebar
         countryName={countryName}
@@ -592,9 +597,9 @@ export function ApplyFlow({
             <span className="mx-2 text-slate-300">›</span>
             <span className="font-medium text-slate-900">{currentStepInfo.label}</span>
           </nav>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {saveMessage && (
-              <span className={`text-xs ${saveMessage.includes("saved") ? "text-emerald-600" : "text-slate-500"}`}>
+              <span className={`hidden text-xs sm:block ${saveMessage.includes("saved") ? "text-emerald-600" : "text-slate-500"}`}>
                 {saveMessage}
               </span>
             )}
@@ -602,18 +607,32 @@ export function ApplyFlow({
               type="button"
               onClick={handleManualSave}
               disabled={isSaving || isLoading || !draftToken}
-              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-violet-600 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-violet-600 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
-              {isSaving ? "Saving..." : "Save"}
+              <span className="hidden sm:inline">{isSaving ? "Saving..." : "Save"}</span>
             </button>
+            {userEmail && (
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-2 sm:pl-3">
+                <span className="hidden max-w-[140px] truncate text-xs text-slate-500 sm:block" title={userEmail}>
+                  {userEmail}
+                </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const supabase = createClient();
+                    await supabase.auth.signOut();
+                    router.push("/");
+                    router.refresh();
+                  }}
+                  className="rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -679,7 +698,7 @@ export function ApplyFlow({
                 <Step3Residence data={data} updateData={updateData} countryName={countryName} onNext={handleNext} onBack={handleBack} uploadDocument={uploadDocument} deleteDocument={deleteDocument} draftToken={draftToken} />
               )}
               {step === 4 && (
-                <Step4TripDetails data={data} updateData={updateData} countryName={countryName} onNext={handleNext} onBack={handleBack} />
+                <Step4TripDetails data={data} updateData={updateData} countryName={countryName} countrySlug={countrySlug} onNext={handleNext} onBack={handleBack} />
               )}
               {step === 5 && (
                 <Step6Employment data={data} updateData={updateData} countryName={countryName} onNext={handleNext} onBack={handleBack} />
@@ -740,5 +759,7 @@ export function ApplyFlow({
         </main>
       </div>
     </div>
+    <ContactAgentModal defaultCountry={countryName} />
+    </>
   );
 }
