@@ -291,7 +291,9 @@ export function Step9Documents({
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Required documents</h2>
         </div>
         <div className="space-y-3">
-          {allDocs.map((doc) => (
+          {allDocs.map((doc) => {
+            const canGenerate = doc.canGenerate;
+            return (
             <DocRow
               key={doc.id}
               doc={doc}
@@ -301,9 +303,10 @@ export function Step9Documents({
               inputRef={(el) => { inputRefs.current[doc.id] = el; }}
               onUpload={(e) => handleUpload(doc.id, e)}
               onRemove={() => handleRemove(doc.id, doc.altTypes)}
-              onGenerate={doc.canGenerate ? () => setGenerator({ docType: doc.canGenerate, uploadSlot: doc.id }) : undefined}
+              onGenerate={canGenerate ? () => setGenerator({ docType: canGenerate, uploadSlot: doc.id }) : undefined}
             />
-          ))}
+            );
+          })}
 
           {/* Extra document slots */}
           {extraSlots.map((slot) => (

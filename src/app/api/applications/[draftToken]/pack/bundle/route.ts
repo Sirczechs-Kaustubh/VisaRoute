@@ -13,7 +13,7 @@ export async function GET(
   try {
     const { draftToken } = await params;
     const result = await packService.buildBundle(draftToken);
-    return new Response(result.buffer, {
+    return new Response(new Uint8Array(result.buffer), {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
