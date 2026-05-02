@@ -15,7 +15,9 @@ import { Step9Documents } from "./steps/Step9Documents";
 import { Step10Checks } from "./steps/Step10Checks";
 import { Step11Review } from "./steps/Step11Review";
 import { Step12Pack } from "./steps/Step12Pack";
-import { Step13Appointment } from "./steps/Step13Appointment";
+import { Step13AppointmentBooked } from "./steps/Step13AppointmentBooked";
+import { Step14BiometricsAttended } from "./steps/Step14BiometricsAttended";
+import { Step15VisaReceived } from "./steps/Step15VisaReceived";
 import {
   DEFAULT_PHONE_DIAL,
   formatPhoneForStorage,
@@ -97,6 +99,15 @@ export interface ApplicationData {
   passportIssuingCountry: string;
   passportIssueDate: string;
   passportIssuePlace: string;
+  appointmentDateTime: string;
+  appointmentLocation: string;
+  officialApplicationReference: string;
+  appointmentNotes: string;
+  biometricsAttended: string;
+  biometricsNotes: string;
+  visaOutcome: string;
+  visaNumber: string;
+  visaOutcomeNotes: string;
 }
 
 export const STEPS = [
@@ -108,24 +119,20 @@ export const STEPS = [
   { id: 6, slug: "history", label: "Travel History", icon: "🕐" },
   { id: 7, slug: "documents", label: "Documents", icon: "📄" },
   { id: 8, slug: "checks", label: "Doc Checks", icon: "🔍" },
-  { id: 9, slug: "review", label: "Review", icon: "📋" },
+  { id: 9, slug: "review-submit", label: "Review & Submit", icon: "📋" },
   { id: 10, slug: "pack", label: "Visa Pack", icon: "📦" },
-  { id: 11, slug: "submit", label: "Submit", icon: "✓" },
+  { id: 11, slug: "appointment-booked", label: "Appointment Booked", icon: "📅" },
+  { id: 12, slug: "biometrics-attended", label: "Biometrics Attended", icon: "🧬" },
+  { id: 13, slug: "visa-received", label: "Visa Received", icon: "🛂" },
 ] as const;
 
-const TOTAL_STEPS = 11;
+const TOTAL_STEPS = 13;
 
 // Map old 13-step numbers to new 11-step numbers for draft hydration
 function migrateStepNumber(oldStep: number): number {
-  if (oldStep <= 4) return oldStep;
-  if (oldStep === 5) return 4; // companions merged into trip details
-  if (oldStep === 6) return 5; // employment
-  if (oldStep <= 8) return 6; // visa history + refusals merged
-  if (oldStep === 9) return 7; // documents
-  if (oldStep === 10) return 8; // checks
-  if (oldStep === 11) return 9; // review
-  if (oldStep === 12) return 10; // pack
-  return 11; // submit
+  if (!Number.isFinite(oldStep) || oldStep < 1) return 1;
+  if (oldStep > TOTAL_STEPS) return TOTAL_STEPS;
+  return Math.floor(oldStep);
 }
 
 interface ApplyFlowProps {
@@ -174,6 +181,15 @@ function emptyApplicationData(): ApplicationData {
     passportIssuingCountry: "",
     passportIssueDate: "",
     passportIssuePlace: "",
+    appointmentDateTime: "",
+    appointmentLocation: "",
+    officialApplicationReference: "",
+    appointmentNotes: "",
+    biometricsAttended: "",
+    biometricsNotes: "",
+    visaOutcome: "",
+    visaNumber: "",
+    visaOutcomeNotes: "",
   };
 }
 
@@ -475,8 +491,13 @@ export function ApplyFlow({
       try {
         await persistDraft(nextStep);
       } catch (error) {
-        setSaveMessage(error instanceof Error ? error.message : "Could not save your progress");
-        return;
+        // Do not block user progression when autosave fails (e.g. transient network issues).
+        setStep(nextStep);
+        setSaveMessage(
+          error instanceof Error
+            ? `${error.message}. You can continue; we'll save when connection recovers.`
+            : "Could not save your progress. You can continue and save later.",
+        );
       }
     });
   }
@@ -491,8 +512,13 @@ export function ApplyFlow({
       try {
         await persistDraft(previousStep);
       } catch (error) {
-        setSaveMessage(error instanceof Error ? error.message : "Could not save your progress");
-        return;
+        // Navigation should remain available even if persistence fails.
+        setStep(previousStep);
+        setSaveMessage(
+          error instanceof Error
+            ? `${error.message}. You can continue; we'll save when connection recovers.`
+            : "Could not save your progress. You can continue and save later.",
+        );
       }
     });
   }
@@ -503,6 +529,29 @@ export function ApplyFlow({
         await persistDraft(step);
       } catch (error) {
         setSaveMessage(error instanceof Error ? error.message : "Could not save your progress");
+      }
+    });
+  }
+
+  function handleReviewSubmit() {
+    if (!draftToken) {
+      setSaveMessage("Could not submit: draft token is missing.");
+      return;
+    }
+
+    startSaving(async () => {
+      try {
+        // Save all latest edits first, then submit, then move to final Visa Pack step.
+        await persistDraft(9);
+        const response = await fetch(`/api/applications/${draftToken}/submit`, { method: "POST" });
+        const payload = (await response.json()) as { error?: { message?: string } };
+        if (!response.ok) {
+          throw new Error(payload.error?.message ?? "Submission failed");
+        }
+        setStep(10);
+        setSaveMessage("Application submitted successfully");
+      } catch (error) {
+        setSaveMessage(error instanceof Error ? error.message : "Submission failed");
       }
     });
   }
@@ -645,20 +694,45 @@ export function ApplyFlow({
                 <Step10Checks data={data} countryName={countryName} onNext={handleNext} onBack={handleBack} draftToken={draftToken} />
               )}
               {step === 9 && (
-                <Step11Review data={data} countryName={countryName} onNext={handleNext} onBack={handleBack} draftToken={draftToken} />
-              )}
-              {step === 10 && (
-                <Step12Pack data={data} countryName={countryName} onNext={handleNext} onBack={handleBack} draftToken={draftToken} />
-              )}
-              {step === 11 && (
-                <Step13Appointment
+                <Step11Review
                   data={data}
+                  updateData={updateData}
                   countryName={countryName}
-                  countrySlug={countrySlug}
-                  visaFeeEur={visaFeeEur}
-                  serviceFeeEur={serviceFeeEur}
+                  onSubmit={handleReviewSubmit}
                   onBack={handleBack}
                   draftToken={draftToken}
+                />
+              )}
+              {step === 10 && (
+                <Step12Pack
+                  data={data}
+                  countryName={countryName}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                  draftToken={draftToken}
+                />
+              )}
+              {step === 11 && (
+                <Step13AppointmentBooked
+                  data={data}
+                  updateData={updateData}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                />
+              )}
+              {step === 12 && (
+                <Step14BiometricsAttended
+                  data={data}
+                  updateData={updateData}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                />
+              )}
+              {step === 13 && (
+                <Step15VisaReceived
+                  data={data}
+                  updateData={updateData}
+                  onBack={handleBack}
                 />
               )}
             </div>

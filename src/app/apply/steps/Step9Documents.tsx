@@ -53,19 +53,6 @@ const GOOD_TO_HAVE_DOCS: DocConfig[] = [
   { id: "holiday_letter", label: "Personal travel statement", desc: "Explaining your travel purpose", icon: "🏖️", canGenerate: "holiday_letter" },
 ];
 
-function SegmentHeader({ title, badge }: { title: string; badge?: string }) {
-  return (
-    <div className="mb-3 flex items-center gap-3">
-      <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">{title}</h2>
-      {badge && (
-        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">
-          {badge}
-        </span>
-      )}
-    </div>
-  );
-}
-
 function ValidationBadge({ validation }: { validation: UploadedDocument["validation"] }) {
   if (!validation || validation.status === "PASSED") return null;
   if (validation.status === "WARNING") {
@@ -299,11 +286,12 @@ export function Step9Documents({
         </p>
       </div>
 
-      {/* ── MUST HAVE ─────────────────────────────────── */}
       <div className="mt-8">
-        <SegmentHeader title="Must Have" badge="Required" />
+        <div className="mb-3 flex items-center gap-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Required documents</h2>
+        </div>
         <div className="space-y-3">
-          {mustHaveDocs.map((doc) => (
+          {allDocs.map((doc) => (
             <DocRow
               key={doc.id}
               doc={doc}
@@ -313,43 +301,7 @@ export function Step9Documents({
               inputRef={(el) => { inputRefs.current[doc.id] = el; }}
               onUpload={(e) => handleUpload(doc.id, e)}
               onRemove={() => handleRemove(doc.id, doc.altTypes)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* ── SHOULD HAVE ───────────────────────────────── */}
-      <div className="mt-8">
-        <SegmentHeader title="Should Have" badge="Strongly recommended" />
-        <div className="space-y-3">
-          {SHOULD_HAVE_DOCS.map((doc) => (
-            <DocRow
-              key={doc.id}
-              doc={doc}
-              uploadedDoc={getDoc(doc.id, doc.altTypes)}
-              isUploading={uploadingId === doc.id}
-              inputRef={(el) => { inputRefs.current[doc.id] = el; }}
-              onUpload={(e) => handleUpload(doc.id, e)}
-              onRemove={() => handleRemove(doc.id, doc.altTypes)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* ── GOOD TO HAVE ──────────────────────────────── */}
-      <div className="mt-8">
-        <SegmentHeader title="Good to Have" badge="Strengthens your application" />
-        <div className="space-y-3">
-          {goodToHaveDocs.map((doc) => (
-            <DocRow
-              key={doc.id}
-              doc={doc}
-              uploadedDoc={getDoc(doc.id, doc.altTypes)}
-              isUploading={uploadingId === doc.id}
-              inputRef={(el) => { inputRefs.current[doc.id] = el; }}
-              onUpload={(e) => handleUpload(doc.id, e)}
-              onRemove={() => handleRemove(doc.id, doc.altTypes)}
-              onGenerate={doc.canGenerate ? () => setGenerator({ docType: doc.canGenerate!, uploadSlot: doc.id }) : undefined}
+              onGenerate={doc.canGenerate ? () => setGenerator({ docType: doc.canGenerate, uploadSlot: doc.id }) : undefined}
             />
           ))}
 
