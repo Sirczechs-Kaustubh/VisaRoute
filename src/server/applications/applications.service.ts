@@ -268,7 +268,7 @@ function toRefusalHistoryInput(
 export class ApplicationsService {
   constructor(private readonly repository = new ApplicationsRepository()) {}
 
-  async createApplicationDraft(countrySlug: string) {
+  async createApplicationDraft(countrySlug: string, userId?: string | null) {
     const country = await this.repository.findCountryBySlug(countrySlug);
 
     if (!country) {
@@ -278,6 +278,7 @@ export class ApplicationsService {
     const createdApplication = await this.repository.createDraft({
       countryId: country.id,
       draftToken: generateDraftToken(),
+      userId: userId ?? undefined,
     });
 
     return mapApplication({

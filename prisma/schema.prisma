@@ -218,6 +218,7 @@ model Application {
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
   applyingFromCountry  String?
+  userId               String?
   country              Country             @relation(fields: [countryId], references: [id], onDelete: Restrict)
   applicantProfile     ApplicantProfile?
   travelPlan           TravelPlan?
@@ -513,4 +514,14 @@ model EmailLog {
 
   @@index([applicationId])
   @@index([emailType])
+}
+
+model ContactRequest {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  country   String?
+  message   String?
+  createdAt DateTime @default(now())
 }

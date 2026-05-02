@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ApplicationData } from "../ApplyFlow";
 import { StepFooter, TipBox } from "../StepFooter";
+import { getEntryCities } from "@/lib/entry-cities";
 
 const ACCOMMODATIONS = [
   { id: "hotel", label: "Hotel", desc: "Booking confirmation required", icon: "🏨" },
@@ -11,7 +12,6 @@ const ACCOMMODATIONS = [
   { id: "hostel", label: "Hostel", desc: "Booking confirmation required", icon: "🛏️" },
 ];
 
-const ENTRY_CITIES = ["Paris", "Lyon", "Nice", "Marseille", "Bordeaux", "Other"];
 
 function normalizeCompanionMembers(data: ApplicationData, count: number) {
   const size = Math.max(0, count);
@@ -26,15 +26,18 @@ export function Step4TripDetails({
   data,
   updateData,
   countryName,
+  countrySlug,
   onNext,
   onBack,
 }: {
   data: ApplicationData;
   updateData: (u: Partial<ApplicationData>) => void;
   countryName: string;
+  countrySlug: string;
   onNext: () => void;
   onBack: () => void;
 }) {
+  const ENTRY_CITIES = getEntryCities(countrySlug);
   const [section, setSection] = useState<"travel" | "companions">("travel");
   const [stepError, setStepError] = useState<string | null>(null);
 
