@@ -29,10 +29,6 @@ export default async function ApplyPage({
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    const next = encodeURIComponent(`/apply${countrySlug ? `?country=${countrySlug}` : ""}${draftToken ? `&draft=${draftToken}` : ""}`);
-    redirect(`/auth/login?next=${next}`);
-  }
 
   let initialDraft: ApplicationDraft | null = null;
 
@@ -109,7 +105,7 @@ export default async function ApplyPage({
       visaFeeEur={country.visaFeeEur}
       serviceFeeEur={country.ourServiceFeeEur}
       initialDraft={initialDraft}
-      userEmail={user.email ?? undefined}
+      user={user}
     />
   );
 }

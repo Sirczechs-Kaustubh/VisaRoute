@@ -518,4 +518,18 @@ export class ApplicationsService {
 
     return mapApplication(updatedApplication);
   }
+
+  async linkDraftToUser(draftToken: string, userId: string) {
+    const existingApplication = await this.repository.findByDraftToken(draftToken);
+
+    if (!existingApplication) {
+      throw new ApiError(404, "APPLICATION_NOT_FOUND", "Application draft not found");
+    }
+
+    const updatedApplication = await this.repository.updateDraft(draftToken, {
+      userId,
+    });
+
+    return mapApplication(updatedApplication);
+  }
 }

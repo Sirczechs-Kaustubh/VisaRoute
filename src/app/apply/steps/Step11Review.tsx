@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { ApplicationData } from "../ApplyFlow";
 import { StepFooter, TipBox } from "../StepFooter";
 import { formatPhoneDisplay } from "@/lib/phone-dial-codes";
+import { createClient } from "@/utils/supabase/client";
 
 interface ReviewData {
   destination: string;
@@ -53,6 +55,8 @@ export function Step11Review({
   onSubmit,
   onBack,
   draftToken,
+  isAuthenticated,
+  onAuthSuccess,
 }: {
   data: ApplicationData;
   updateData: (u: Partial<ApplicationData>) => void;
@@ -60,9 +64,19 @@ export function Step11Review({
   onSubmit: () => void;
   onBack: () => void;
   draftToken?: string | null;
+  isAuthenticated: boolean;
+  onAuthSuccess: () => void;
 }) {
   const [review, setReview] = useState<ReviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
+  const [authFirstName, setAuthFirstName] = useState(data.firstName || "");
+  const [authLastName, setAuthLastName] = useState(data.lastName || "");
+  const [authEmail, setAuthEmail] = useState(data.email || "");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
     if (!draftToken) { setLoading(false); return; }
@@ -73,6 +87,52 @@ export function Step11Review({
       .finally(() => setLoading(false));
   }, [draftToken]);
 
+  async function handleAuthSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthError("");
+    setAuthLoading(true);
+
+    try {
+      const supabase = createClient();
+
+      if (authMode === "signup") {
+        const { error } = await supabase.auth.signUp({ email: authEmail, password: authPassword });
+        if (error) {
+          if (error.message.includes("already been registered")) {
+            setAuthError("This email already has an account. Please login instead.");
+            setAuthMode("login");
+          } else {
+            setAuthError(error.message);
+          }
+          return;
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+        if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+            setAuthError("Invalid email or password. Please try again.");
+          } else if (error.message.includes("already been registered")) {
+            setAuthError("This email already has an account. Please login instead.");
+            setAuthMode("login");
+          } else {
+            setAuthError(error.message);
+          }
+          return;
+        }
+      }
+
+      if (draftToken) {
+        await fetch(`/api/applications/${draftToken}/link-user`, { method: "POST" });
+      }
+
+      onAuthSuccess();
+    } catch {
+      setAuthError("Something went wrong. Please try again.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -82,6 +142,140 @@ export function Step11Review({
   }
 
   const r = review;
+
+  if (!isAuthenticated && !showAuthPrompt) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+        <div className="mb-6 rounded-full bg-primary-100 p-4">
+          <svg className="h-10 w-10 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          One more step to submit
+        </h1>
+        <p className="mt-2 max-w-md text-slate-600">
+          Create an account to save your application and track your visa status.
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowAuthPrompt(true)}
+          className="mt-6 rounded-xl bg-primary-600 px-8 py-3 font-medium text-white transition hover:bg-primary-700"
+        >
+          Continue with account
+        </button>
+        <p className="mt-4 text-sm text-slate-500">
+          Already have an account?{" "}
+          <button type="button" onClick={() => { setShowAuthPrompt(true); setAuthMode("login"); }} className="text-primary-600 hover:underline">
+            Sign in
+          </button>
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && showAuthPrompt) {
+    return (
+      <div className="mx-auto max-w-md">
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-6">
+          <h2 className="text-lg font-semibold text-slate-900">
+            {authMode === "signup" ? "Create your account" : "Sign in to your account"}
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            This will link your application to your account.
+          </p>
+
+          <form onSubmit={handleAuthSubmit} className="mt-6 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">First name</label>
+                <input
+                  type="text"
+                  value={authFirstName}
+                  onChange={(e) => setAuthFirstName(e.target.value)}
+                  required
+                  className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                  placeholder="First name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Last name</label>
+                <input
+                  type="text"
+                  value={authLastName}
+                  onChange={(e) => setAuthLastName(e.target.value)}
+                  required
+                  className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Email</label>
+              <input
+                type="email"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                required
+                className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                placeholder="you@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Password</label>
+              <input
+                type="password"
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                required
+                minLength={8}
+                className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                placeholder="Min 8 characters"
+              />
+            </div>
+
+            {authError && (
+              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{authError}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full rounded-lg bg-primary-600 py-2.5 font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
+            >
+              {authLoading ? "Please wait..." : authMode === "signup" ? "Create account & submit" : "Sign in & submit"}
+            </button>
+          </form>
+
+          <p className="mt-4 text-center text-sm text-slate-500">
+            {authMode === "signup" ? (
+              <>
+                Already have an account?{" "}
+                <button type="button" onClick={() => setAuthMode("login")} className="text-primary-600 hover:underline">
+                  Sign in
+                </button>
+              </>
+            ) : (
+              <>
+                Don&apos;t have an account?{" "}
+                <button type="button" onClick={() => setAuthMode("signup")} className="text-primary-600 hover:underline">
+                  Create one
+                </button>
+              </>
+            )}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowAuthPrompt(false)}
+          className="w-full py-2 text-sm text-slate-500 hover:text-slate-700"
+        >
+          ← Go back
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -143,7 +143,7 @@ interface ApplyFlowProps {
   visaFeeEur: number;
   serviceFeeEur: number;
   initialDraft: ApplicationDraft | null;
-  userEmail?: string;
+  user?: import("@supabase/supabase-js").User | null;
 }
 
 function emptyApplicationData(): ApplicationData {
@@ -336,7 +336,7 @@ export function ApplyFlow({
   visaFeeEur,
   serviceFeeEur,
   initialDraft,
-  userEmail,
+  user,
 }: ApplyFlowProps) {
   const router = useRouter();
   const [draftToken, setDraftToken] = useState(initialDraft?.draftToken ?? null);
@@ -351,6 +351,9 @@ export function ApplyFlow({
   const [isSaving, startSaving] = useTransition();
   const dataRef = useRef(data);
   dataRef.current = data;
+
+  const userEmail = user?.email;
+  const isAuthenticated = !!user;
 
   useEffect(() => {
     if (initialDraft) {
@@ -720,6 +723,10 @@ export function ApplyFlow({
                   onSubmit={handleReviewSubmit}
                   onBack={handleBack}
                   draftToken={draftToken}
+                  isAuthenticated={isAuthenticated}
+                  onAuthSuccess={() => {
+                    router.refresh();
+                  }}
                 />
               )}
               {step === 10 && (
